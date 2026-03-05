@@ -26,8 +26,8 @@ public class DepartmentController {
     /** 分页查询（含部门人数） */
     @GetMapping("/list")
     public Result<?> list(@RequestParam(defaultValue = "1") Integer pageNum,
-                          @RequestParam(defaultValue = "10") Integer pageSize,
-                          @RequestParam(required = false) String name) {
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String name) {
         Page<Department> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Department> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(name != null, Department::getName, name);
@@ -59,7 +59,7 @@ public class DepartmentController {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getDeptId, id);
         wrapper.select(User::getId, User::getUsername, User::getRealName,
-                       User::getEmployeeNo, User::getPhone, User::getEmail, User::getGender);
+                User::getEmployeeNo, User::getPhone, User::getEmail, User::getGender);
         List<User> users = userMapper.selectList(wrapper);
         return Result.success(users);
     }
@@ -85,6 +85,13 @@ public class DepartmentController {
     /** 删除 */
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
+        // 检查部门下是否还有成员
+        long memberCount = userMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.teacher.management.entity.User>()
+                        .eq(com.teacher.management.entity.User::getDeptId, id));
+        if (memberCount > 0) {
+            return Result.error("该部门下仍有 " + memberCount + " 名成员，请先转移后再删除");
+        }
         return departmentService.removeById(id) ? Result.success() : Result.error("删除失败");
     }
 }

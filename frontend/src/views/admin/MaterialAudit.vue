@@ -3,27 +3,24 @@
     <!-- Search Bar -->
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="提交月份">
-          <el-date-picker
-            v-model="searchForm.submitMonth"
-            type="month"
-            placeholder="选择月份"
-            format="YYYY-MM"
-            value-format="YYYY-MM"
-            clearable
-            style="width: 180px"
-          />
-        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部状态" clearable style="width: 150px">
             <el-option label="审核中" :value="0" />
             <el-option label="已归档" :value="1" />
             <el-option label="已驳回" :value="2" />
+            <el-option label="待终审" :value="3" />
+            <el-option label="终审退回" :value="4" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="部门/学院">
+          <el-select v-model="searchForm.deptId" placeholder="全部学院" clearable filterable style="width: 180px">
+            <el-option v-for="d in deptList" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch" :icon="Search">查询</el-button>
           <el-button @click="resetSearch" :icon="Refresh">重置</el-button>
+          <el-button @click="handleBatchExport" :icon="Download" :loading="exporting" class="export-btn">批量导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -41,7 +38,6 @@
         <el-table-column prop="teacherName" label="教师姓名" width="120" />
         <el-table-column prop="employeeNo" label="工号" width="120" />
         <el-table-column prop="deptName" label="所属学院" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="submitMonth" label="提交月份" width="120" />
         <el-table-column prop="taskName" label="任务名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="createTime" label="提交时间" width="180">
           <template #default="scope">
@@ -55,27 +51,29 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="scope">
             <el-button link type="primary" size="small" @click="handleView(scope.row)">查看详情</el-button>
+            <el-button link type="primary" size="small" @click="handleSingleExport(scope.row)">导出</el-button>
             <el-button
-              v-if="scope.row.status === 0"
+              v-if="scope.row.status === 0 || scope.row.status === 3"
               type="primary"
               size="small"
               plain
               @click="handleAudit(scope.row)"
             >
-              审核
+              {{ scope.row.status === 3 ? '终审' : '审核' }}
             </el-button>
             <el-button
               link
               type="info"
               size="small"
               disabled
-              v-else
+              v-else-if="scope.row.status === 1 || scope.row.status === 2"
             >
               已审核
             </el-button>
+            <el-tag v-else-if="scope.row.status === 4" type="info" size="small">终审退回</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -93,10 +91,9 @@
       </div>
     </el-card>
 
-    <!-- Audit Dialog -->
     <el-dialog
       v-model="auditDialogVisible"
-      title="审核提交"
+      :title="currentAuditRow?.status === 3 ? '终审提交' : '审核提交'"
       width="500px"
       append-to-body
     >
@@ -105,6 +102,7 @@
           <el-radio-group v-model="auditForm.status">
             <el-radio :label="1">通过 (归档)</el-radio>
             <el-radio :label="2">驳回</el-radio>
+            <el-radio v-if="currentAuditRow?.status === 3" :label="4">退回部门主任</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="审核意见">
@@ -139,7 +137,6 @@
           <el-descriptions-item label="教师姓名">{{ detailData.teacherName }}</el-descriptions-item>
           <el-descriptions-item label="工号">{{ detailData.employeeNo }}</el-descriptions-item>
           <el-descriptions-item label="所属学院">{{ detailData.deptName }}</el-descriptions-item>
-          <el-descriptions-item label="提交月份">{{ detailData.submitMonth }}</el-descriptions-item>
           <el-descriptions-item label="任务名称">{{ detailData.taskName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getStatusType(detailData.status)">{{ getStatusLabel(detailData.status) }}</el-tag>
@@ -147,8 +144,18 @@
           <el-descriptions-item label="提交时间">{{ formatTime(detailData.createTime) }}</el-descriptions-item>
         </el-descriptions>
 
+        <div v-if="detailData.deptAuditStatus" class="audit-remark-box" style="margin-top: 12px;">
+          <p><strong>部门初审：</strong>
+            <el-tag :type="detailData.deptAuditStatus === 1 ? 'success' : 'danger'" size="small">
+              {{ detailData.deptAuditStatus === 1 ? '已通过' : '已驳回' }}
+            </el-tag>
+          </p>
+          <p v-if="detailData.deptAuditRemark"><strong>部门审核意见：</strong>{{ detailData.deptAuditRemark }}</p>
+          <p v-if="detailData.deptAuditTime"><strong>部门审核时间：</strong>{{ formatTime(detailData.deptAuditTime) }}</p>
+        </div>
+
         <div v-if="detailData.auditRemark" class="audit-remark-box">
-          <p><strong>审核意见：</strong>{{ detailData.auditRemark }}</p>
+          <p><strong>终审意见：</strong>{{ detailData.auditRemark }}</p>
         </div>
 
         <el-divider content-position="left">填报内容</el-divider>
@@ -195,10 +202,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Search, Refresh, DocumentChecked } from '@element-plus/icons-vue'
+import { Search, Refresh, DocumentChecked, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { getSubmissionList, getSubmissionDetail, auditSubmission } from '../../api/admin'
+import { getSubmissionList, getSubmissionDetail, auditSubmission, getAllDepts, exportSubmissions, exportSingleSubmission } from '../../api/admin'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -206,9 +213,11 @@ const total = ref(0)
 const searchForm = reactive({
   pageNum: 1,
   pageSize: 10,
-  submitMonth: '',
-  status: ''
+  status: '',
+  deptId: ''
 })
+const deptList = ref([])
+const exporting = ref(false)
 
 const viewDialogVisible = ref(false)
 const detailData = ref(null)
@@ -216,6 +225,7 @@ const detailData = ref(null)
 const auditDialogVisible = ref(false)
 const auditSubmitting = ref(false)
 const currentAuditId = ref(null)
+const currentAuditRow = ref(null)
 const auditForm = reactive({
   status: 1,
   auditRemark: ''
@@ -312,7 +322,14 @@ const getColumns = (key) => {
 // Lifecycle
 onMounted(() => {
   getList()
+  loadDepts()
 })
+
+const loadDepts = () => {
+  getAllDepts().then(res => {
+    deptList.value = res.data || []
+  })
+}
 
 // Methods
 const getList = () => {
@@ -335,9 +352,45 @@ const handleSearch = () => {
 }
 
 const resetSearch = () => {
-  searchForm.submitMonth = ''
   searchForm.status = ''
+  searchForm.deptId = ''
   handleSearch()
+}
+
+// 文件下载工具函数
+const downloadBlob = (data, filename) => {
+  const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  window.URL.revokeObjectURL(url)
+}
+
+const handleBatchExport = () => {
+  exporting.value = true
+  const params = {}
+  if (searchForm.status !== '') params.status = searchForm.status
+  if (searchForm.deptId !== '') params.deptId = searchForm.deptId
+  exportSubmissions(params).then(res => {
+    downloadBlob(res, '教学科研数据导出.xlsx')
+    ElMessage.success('导出成功')
+  }).catch(() => {
+    ElMessage.error('导出失败')
+  }).finally(() => {
+    exporting.value = false
+  })
+}
+
+const handleSingleExport = (row) => {
+  exportSingleSubmission(row.id).then(res => {
+    const name = row.teacherName || '教师'
+    downloadBlob(res, `${name}_${row.taskName || ''}_教学科研数据.xlsx`)
+    ElMessage.success('导出成功')
+  }).catch(() => {
+    ElMessage.error('导出失败')
+  })
 }
 
 const handleView = (row) => {
@@ -349,6 +402,7 @@ const handleView = (row) => {
 
 const handleAudit = (row) => {
   currentAuditId.value = row.id
+  currentAuditRow.value = row
   auditForm.status = 1
   auditForm.auditRemark = ''
   auditDialogVisible.value = true
@@ -379,12 +433,12 @@ const indexMethod = (index) => {
 }
 
 const getStatusLabel = (status) => {
-  const map = {0: '待审核', 1: '已归档', 2: '已驳回'}
+  const map = {0: '待审核', 1: '已归档', 2: '已驳回', 3: '待终审', 4: '终审退回'}
   return map[status] || '未知'
 }
 
 const getStatusType = (status) => {
-  const map = {0: 'warning', 1: 'success', 2: 'danger'}
+  const map = {0: 'warning', 1: 'success', 2: 'danger', 3: '', 4: 'info'}
   return map[status] || 'info'
 }
 </script>
@@ -480,12 +534,17 @@ const getStatusType = (status) => {
 }
 
 /* Button overrides for audit actions */
-:deep(.el-button--success) {
-  background-color: #10b981;
-  border-color: #10b981;
-}
-:deep(.el-button--primary) {
+:deep(.el-button--primary:not(.is-link):not(.is-plain)) {
   background-color: var(--color-cta);
   border-color: var(--color-cta);
+  color: #fff;
+}
+:deep(.el-button.export-btn) {
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: #fff;
+}
+:deep(.el-button.export-btn:hover) {
+  opacity: 0.9;
 }
 </style>

@@ -1,4 +1,4 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
@@ -7,7 +7,15 @@ import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class AwardExcelDTO {
+public class AwardExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("获奖名称")
     @ColumnWidth(28)
     private String name;
@@ -34,11 +42,27 @@ public class AwardExcelDTO {
 
     @ExcelProperty("获奖日期")
     @ColumnWidth(18)
-    private String date;
+    private String awardDate;
 
     @ExcelProperty("证书编号")
     @ColumnWidth(20)
     private String certNo;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getName() {
         return name;
@@ -88,12 +112,12 @@ public class AwardExcelDTO {
         this.orgRank = orgRank;
     }
 
-    public String getDate() {
-        return date;
+    public String getAwardDate() {
+        return awardDate;
     }
 
-    public void setDate(String date) {
-        this.date = date;
+    public void setAwardDate(String awardDate) {
+        this.awardDate = awardDate;
     }
 
     public String getCertNo() {

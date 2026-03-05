@@ -1,4 +1,4 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
@@ -7,7 +7,15 @@ import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class CompetitionExcelDTO {
+public class CompetitionExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("竞赛类别")
     @ColumnWidth(16)
     private String category;
@@ -42,11 +50,27 @@ public class CompetitionExcelDTO {
 
     @ExcelProperty("参赛学生")
     @ColumnWidth(28)
-    private String studentsStr;
+    private String students;
 
     @ExcelProperty("指导教师")
     @ColumnWidth(28)
-    private String advisorTeachersStr;
+    private String advisorTeachers;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getCategory() {
         return category;
@@ -112,19 +136,19 @@ public class CompetitionExcelDTO {
         this.awardGrade = awardGrade;
     }
 
-    public String getStudentsStr() {
-        return studentsStr;
+    public String getStudents() {
+        return students;
     }
 
-    public void setStudentsStr(String studentsStr) {
-        this.studentsStr = studentsStr;
+    public void setStudents(String students) {
+        this.students = students;
     }
 
-    public String getAdvisorTeachersStr() {
-        return advisorTeachersStr;
+    public String getAdvisorTeachers() {
+        return advisorTeachers;
     }
 
-    public void setAdvisorTeachersStr(String advisorTeachersStr) {
-        this.advisorTeachersStr = advisorTeachersStr;
+    public void setAdvisorTeachers(String advisorTeachers) {
+        this.advisorTeachers = advisorTeachers;
     }
 }

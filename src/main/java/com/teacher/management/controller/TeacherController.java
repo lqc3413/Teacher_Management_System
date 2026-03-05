@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,16 +64,14 @@ public class TeacherController {
             // 发送通知给所有管理员
             String teacherName = user.getRealName() != null ? user.getRealName() : username;
             messageService.sendToAllAdmins(
-                1,  // type=1: 提交通知
-                user.getId(),
-                submissionId,
-                "新的教学科研信息提交",
-                "教师 " + teacherName + " 提交了 " + dto.getSubmitMonth() + " 的教学科研信息，请审核。"
-            );
+                    1, // type=1: 提交通知
+                    user.getId(),
+                    submissionId,
+                    "新的教学科研信息提交",
+                    "教师 " + teacherName + " 提交了教学科研信息，请审核。");
 
             Map<String, Object> data = new HashMap<>();
             data.put("submissionId", submissionId);
-            data.put("submitMonth", dto.getSubmitMonth());
             data.put("status", "审核中");
 
             return Result.success(data);
@@ -85,9 +82,10 @@ public class TeacherController {
 
     /**
      * 查询提交历史记录
-     * @param year   可选年份筛选，如 "2026"
-     * @param page   页码，默认 1
-     * @param size   每页条数，默认 10
+     * 
+     * @param year 可选年份筛选，如 "2026"
+     * @param page 页码，默认 1
+     * @param size 每页条数，默认 10
      */
     @GetMapping("/history")
     public Result<?> history(
@@ -108,7 +106,7 @@ public class TeacherController {
         QueryWrapper<Submission> sq = new QueryWrapper<>();
         sq.eq("user_id", user.getId());
         if (year != null && !year.isEmpty()) {
-            sq.likeRight("submit_month", year);
+            sq.apply("YEAR(create_time) = {0}", year);
         }
         sq.orderByDesc("create_time");
 
@@ -140,7 +138,7 @@ public class TeacherController {
             item.put("status", sub.getStatus());
             item.put("auditRemark", sub.getAuditRemark());
             item.put("createTime", sub.getCreateTime());
-            
+
             if (sub.getTaskId() != null) {
                 item.put("taskName", taskMap.getOrDefault(sub.getTaskId(), "未知任务"));
             } else {
@@ -185,8 +183,8 @@ public class TeacherController {
     public Result<?> currentTask() {
         QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
         tq.eq("status", 1)
-          .le("start_time", LocalDateTime.now())
-          .ge("end_time", LocalDateTime.now());
+                .le("start_time", LocalDateTime.now())
+                .ge("end_time", LocalDateTime.now());
         CollectionTask task = collectionTaskMapper.selectOne(tq);
 
         if (task == null) {
@@ -233,8 +231,8 @@ public class TeacherController {
         // 1. 查询当前活动任务，判断是否已提交
         QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
         tq.eq("status", 1)
-          .le("start_time", LocalDateTime.now())
-          .ge("end_time", LocalDateTime.now());
+                .le("start_time", LocalDateTime.now())
+                .ge("end_time", LocalDateTime.now());
         CollectionTask activeTask = collectionTaskMapper.selectOne(tq);
 
         boolean isSubmitted = false;
@@ -250,7 +248,7 @@ public class TeacherController {
         // 2. 本年度累计填报次数
         String currentYear = String.valueOf(java.time.LocalDate.now().getYear());
         QueryWrapper<Submission> yearQuery = new QueryWrapper<>();
-        yearQuery.eq("user_id", userId).likeRight("submit_month", currentYear);
+        yearQuery.eq("user_id", userId).apply("YEAR(create_time) = {0}", currentYear);
         Long yearlyCount = submissionMapper.selectCount(yearQuery);
 
         // 3. 累计成果数
@@ -302,11 +300,61 @@ public class TeacherController {
     }
 
     /**
+     * 导出个人某次提交的详情为 Excel
+     */
+    @GetMapping("/export/{id}")
+    public void exportSubmission(@PathVariable Long id, HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        QueryWrapper<User> uq = new QueryWrapper<>();
+        uq.eq("username", username);
+        User user = userMapper.selectOne(uq);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 校验提交归属
+        Submission sub = submissionMapper.selectById(id);
+        if (sub == null || !sub.getUserId().equals(user.getId())) {
+            throw new RuntimeException("无权访问该提交记录");
+        }
+
+        try {
+            teacherService.exportSingleSubmission(id, response);
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 导出教师全部已通过的成果数据为 Excel
+     */
+    @GetMapping("/export/achievements")
+    public void exportAllAchievements(HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        QueryWrapper<User> uq = new QueryWrapper<>();
+        uq.eq("username", username);
+        User user = userMapper.selectOne(uq);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        try {
+            teacherService.exportAllAchievements(user.getId(), response);
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 上传 Excel 导入数据
      */
     @PostMapping("/excel/import")
     public Result<?> importExcel(@RequestParam("file") MultipartFile file,
-                                 @RequestParam("taskId") Long taskId) {
+            @RequestParam("taskId") Long taskId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
@@ -324,12 +372,11 @@ public class TeacherController {
             // 发送通知给所有管理员
             String teacherName = user.getRealName() != null ? user.getRealName() : username;
             messageService.sendToAllAdmins(
-                1,
-                user.getId(),
-                submissionId,
-                "Excel 批量数据导入",
-                "教师 " + teacherName + " 通过 Excel 导入了教学科研信息，请审核。"
-            );
+                    1,
+                    user.getId(),
+                    submissionId,
+                    "Excel 批量数据导入",
+                    "教师 " + teacherName + " 通过 Excel 导入了教学科研信息，请审核。");
 
             Map<String, Object> data = new HashMap<>();
             data.put("submissionId", submissionId);
@@ -396,4 +443,3 @@ public class TeacherController {
         return Result.success("学历/职称信息更新成功");
     }
 }
-

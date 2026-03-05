@@ -1,4 +1,4 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
@@ -7,7 +7,15 @@ import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class InnovationProjectExcelDTO {
+public class InnovationProjectExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("项目状态")
     @ColumnWidth(14)
     private String status;
@@ -34,7 +42,7 @@ public class InnovationProjectExcelDTO {
 
     @ExcelProperty("其他学生")
     @ColumnWidth(28)
-    private String otherStudentsStr;
+    private String otherStudents;
 
     @ExcelProperty("项目经费（元）")
     @ColumnWidth(16)
@@ -46,7 +54,23 @@ public class InnovationProjectExcelDTO {
 
     @ExcelProperty("其他指导教师")
     @ColumnWidth(28)
-    private String otherTeachersStr;
+    private String otherTeachers;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getStatus() {
         return status;
@@ -96,12 +120,12 @@ public class InnovationProjectExcelDTO {
         this.leaderStudent = leaderStudent;
     }
 
-    public String getOtherStudentsStr() {
-        return otherStudentsStr;
+    public String getOtherStudents() {
+        return otherStudents;
     }
 
-    public void setOtherStudentsStr(String otherStudentsStr) {
-        this.otherStudentsStr = otherStudentsStr;
+    public void setOtherStudents(String otherStudents) {
+        this.otherStudents = otherStudents;
     }
 
     public String getFunds() {
@@ -120,11 +144,11 @@ public class InnovationProjectExcelDTO {
         this.paperInfo = paperInfo;
     }
 
-    public String getOtherTeachersStr() {
-        return otherTeachersStr;
+    public String getOtherTeachers() {
+        return otherTeachers;
     }
 
-    public void setOtherTeachersStr(String otherTeachersStr) {
-        this.otherTeachersStr = otherTeachersStr;
+    public void setOtherTeachers(String otherTeachers) {
+        this.otherTeachers = otherTeachers;
     }
 }

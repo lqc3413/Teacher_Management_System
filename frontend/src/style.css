@@ -6,6 +6,18 @@
 /* ---------- Google Fonts ---------- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+#app {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 /* ========== Default / Admin Theme (Premium Stone & Gold - Refined) ========== */
 :root {
     /* Primary: Deep Stone (Sidebar Background) */

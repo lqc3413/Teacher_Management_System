@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * JWT 认证过滤器
@@ -30,8 +31,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
 
@@ -44,13 +45,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String username = claims.getSubject();
                     String role = claims.get("role", String.class);
 
+                    // 创建权限列表
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+
+                    // 部门主任同时拥有教师权限，使其可以访问教师端接口
+                    if ("dept_director".equalsIgnoreCase(role)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_TEACHER"));
+                    }
+
                     // 创建认证对象，放入 SecurityContext
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    username,
-                                    null,
-                                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                            );
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            username,
+                            null,
+                            authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }

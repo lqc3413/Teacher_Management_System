@@ -10,23 +10,27 @@
       </div>
 
       <nav class="sidebar-menu">
-        <router-link to="/teacher/dashboard" class="nav-item" active-class="active">
+        <router-link :to="routePrefix + '/dashboard'" class="nav-item" active-class="active">
           <el-icon><HomeFilled /></el-icon>
           <span class="label">工作台</span>
         </router-link>
-        <router-link to="/teacher/info-fill" class="nav-item" active-class="active">
+        <router-link v-if="isDeptDirector" :to="routePrefix + '/audit'" class="nav-item" active-class="active">
+          <el-icon><Stamp /></el-icon>
+          <span class="label">部门审核</span>
+        </router-link>
+        <router-link :to="routePrefix + '/info-fill'" class="nav-item" active-class="active">
           <el-icon><EditPen /></el-icon>
           <span class="label">信息填报</span>
         </router-link>
-        <router-link to="/teacher/history" class="nav-item" active-class="active">
+        <router-link :to="routePrefix + '/history'" class="nav-item" active-class="active">
           <el-icon><List /></el-icon>
           <span class="label">填报记录</span>
         </router-link>
-        <router-link to="/teacher/achievements" class="nav-item" active-class="active">
+        <router-link :to="routePrefix + '/achievements'" class="nav-item" active-class="active">
           <el-icon><Trophy /></el-icon>
           <span class="label">我的成果</span>
         </router-link>
-        <router-link to="/teacher/profile" class="nav-item" active-class="active">
+        <router-link :to="routePrefix + '/profile'" class="nav-item" active-class="active">
           <el-icon><User /></el-icon>
           <span class="label">个人中心</span>
         </router-link>
@@ -46,7 +50,7 @@
         </button>
         <!-- Page Context -->
         <div class="page-context" v-if="!isMobile">
-          <span class="crumb-root">教师端</span>
+          <span class="crumb-root">{{ isDeptDirector ? '部门主任' : '教师端' }}</span>
           <span class="crumb-sep">/</span>
           <span class="crumb-current">{{ currentRouteName }}</span>
         </div>
@@ -91,19 +95,22 @@
           <div class="logo-text">EduCert</div>
         </div>
         <nav class="mobile-nav">
-          <router-link to="/teacher/dashboard" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+          <router-link :to="routePrefix + '/dashboard'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
             <el-icon><HomeFilled /></el-icon> 工作台
           </router-link>
-          <router-link to="/teacher/info-fill" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+          <router-link v-if="isDeptDirector" :to="routePrefix + '/audit'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+            <el-icon><Stamp /></el-icon> 部门审核
+          </router-link>
+          <router-link :to="routePrefix + '/info-fill'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
             <el-icon><EditPen /></el-icon> 信息填报
           </router-link>
-          <router-link to="/teacher/history" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+          <router-link :to="routePrefix + '/history'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
             <el-icon><List /></el-icon> 填报记录
           </router-link>
-          <router-link to="/teacher/achievements" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+          <router-link :to="routePrefix + '/achievements'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
             <el-icon><Trophy /></el-icon> 我的成果
           </router-link>
-          <router-link to="/teacher/profile" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
+          <router-link :to="routePrefix + '/profile'" class="mobile-nav-item" active-class="active" @click="mobileDrawerVisible = false">
             <el-icon><User /></el-icon> 个人中心
           </router-link>
         </nav>
@@ -129,7 +136,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, EditPen, List, Expand, User, Bell, ArrowDown, Check, Trophy } from '@element-plus/icons-vue'
+import { HomeFilled, EditPen, List, Expand, User, Bell, ArrowDown, Check, Trophy, Stamp } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useIsMobile } from '../hooks/useIsMobile'
 import NotificationDrawer from '../components/NotificationDrawer.vue'
@@ -142,6 +149,11 @@ const mobileDrawerVisible = ref(false)
 const notifDrawerVisible = ref(false)
 const realName = ref('Teacher')
 
+// 判断当前用户是否为部门主任
+const userRole = ref(localStorage.getItem('role') || 'teacher')
+const isDeptDirector = computed(() => userRole.value === 'dept_director')
+const routePrefix = computed(() => isDeptDirector.value ? '/dept-director' : '/teacher')
+
 // Helper for initials
 const userInitials = computed(() => {
   return realName.value ? realName.value.charAt(0).toUpperCase() : 'T'
@@ -150,10 +162,16 @@ const userInitials = computed(() => {
 // Route Name Map for Header
 const routeNameMap = {
   'TeacherDashboard': '工作台',
+  'DeptDirectorDashboard': '工作台',
+  'DeptAudit': '部门审核',
   'InfoFill': '信息填报',
+  'DeptInfoFill': '信息填报',
   'History': '填报记录',
+  'DeptHistory': '填报记录',
   'Achievements': '我的成果',
-  'TeacherProfile': '个人中心'
+  'DeptAchievements': '我的成果',
+  'TeacherProfile': '个人中心',
+  'DeptProfile': '个人中心'
 }
 const currentRouteName = computed(() => routeNameMap[route.name] || '工作台')
 
@@ -191,7 +209,7 @@ onBeforeUnmount(() => {
 
 const handleCommand = (command) => {
   if (command === 'profile') {
-    router.push('/teacher/profile')
+    router.push(routePrefix.value + '/profile')
     } else if (command === 'logout') {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
       confirmButtonText: '确定',
@@ -488,6 +506,8 @@ const handleCommand = (command) => {
   min-height: 100vh;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: calc(100% - 256px);
+  box-sizing: border-box;
+  min-width: 0; /* Let flex item shrink below minimum content width */
   
   /* Subtle dot pattern background */
   background-color: #F8FAFC;
@@ -503,6 +523,8 @@ const handleCommand = (command) => {
     max-width: 1280px; /* Wider for Pro Max feel */
     margin: 0 auto;
     padding: 32px 40px;
+    box-sizing: border-box;
+    width: 100%;
     
     @media (max-width: 768px) {
       padding: 24px 16px;

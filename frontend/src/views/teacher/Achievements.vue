@@ -2,7 +2,7 @@
   <div class="achievements-container">
     <div class="header-actions">
       <h2 class="page-title">我的成果档案</h2>
-      <el-button :icon="Download" @click="handleExportAll">导出全部</el-button>
+      <el-button :icon="Download" :loading="exportLoading" @click="handleExportAll">导出全部</el-button>
     </div>
 
     <!-- 状态筛选 -->
@@ -210,9 +210,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getAchievements } from '../../api/teacher'
+import { getAchievements, exportAllAchievements } from '../../api/teacher'
 
 const loading = ref(false)
+const exportLoading = ref(false)
 const activeTab = ref('papers')
 const statusFilter = ref('all')
 
@@ -275,8 +276,24 @@ const statCards = computed(() => {
   ]
 })
 
-const handleExportAll = () => {
-  ElMessage.info('导出功能开发中，敬请期待')
+const handleExportAll = async () => {
+  exportLoading.value = true
+  try {
+    const res = await exportAllAchievements()
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '全部成果数据.xlsx'
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败', error)
+    ElMessage.error('导出失败，请稍后重试')
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 onMounted(async () => {

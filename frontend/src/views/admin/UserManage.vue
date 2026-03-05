@@ -49,8 +49,8 @@
         </el-table-column>
         <el-table-column prop="roleName" label="角色" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.roleId === 1 ? 'danger' : 'success'">
-              {{ scope.row.roleId === 1 ? '管理员' : '教师' }}
+            <el-tag :type="scope.row.roleId === 1 ? 'danger' : scope.row.roleId === 3 ? 'warning' : 'success'">
+              {{ scope.row.roleId === 1 ? '管理员' : scope.row.roleId === 3 ? '部门主任' : '教师' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -125,6 +125,7 @@
         <el-form-item label="角色" prop="roleId">
           <el-radio-group v-model="form.roleId">
             <el-radio :label="2">教师</el-radio>
+            <el-radio :label="3">部门主任</el-radio>
             <el-radio :label="1">管理员</el-radio>
           </el-radio-group>
         </el-form-item>

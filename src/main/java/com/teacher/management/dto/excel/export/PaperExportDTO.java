@@ -1,4 +1,4 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
@@ -7,7 +7,15 @@ import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class PaperExcelDTO {
+public class PaperExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("论文类型")
     @ColumnWidth(20)
     private String paperType;
@@ -22,7 +30,7 @@ public class PaperExcelDTO {
 
     @ExcelProperty("其他作者")
     @ColumnWidth(30)
-    private String otherAuthorsStr;
+    private String otherAuthors;
 
     @ExcelProperty("期刊名称")
     @ColumnWidth(26)
@@ -35,6 +43,22 @@ public class PaperExcelDTO {
     @ExcelProperty("发表日期")
     @ColumnWidth(16)
     private String publishDate;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getPaperType() {
         return paperType;
@@ -60,12 +84,12 @@ public class PaperExcelDTO {
         this.authorType = authorType;
     }
 
-    public String getOtherAuthorsStr() {
-        return otherAuthorsStr;
+    public String getOtherAuthors() {
+        return otherAuthors;
     }
 
-    public void setOtherAuthorsStr(String otherAuthorsStr) {
-        this.otherAuthorsStr = otherAuthorsStr;
+    public void setOtherAuthors(String otherAuthors) {
+        this.otherAuthors = otherAuthors;
     }
 
     public String getJournalName() {

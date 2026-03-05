@@ -17,8 +17,7 @@
     <!-- PC端表格视图 -->
     <el-card v-if="!isMobile" shadow="never" class="table-card">
       <el-table :data="tableData" stripe style="width: 100%" v-loading="loading">
-        <el-table-column prop="submitMonth" label="填报月份" width="180" sortable />
-        <el-table-column prop="taskName" label="任务名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="taskName" label="任务名称" min-width="180" show-overflow-tooltip />
         <el-table-column prop="createTime" label="提交时间" width="220">
           <template #default="scope">
             {{ formatTime(scope.row.createTime) }}
@@ -31,17 +30,19 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="scope">
-            <el-button link type="primary" size="small" @click="viewDetail(scope.row)">
-              查看详情
-            </el-button>
-            <el-button link type="primary" size="small" @click="exportPdf(scope.row)">
-              导出PDF
-            </el-button>
-            <el-button v-if="scope.row.status === 2" link type="danger" size="small" @click="handleResubmit(scope.row)">
-              重新修改
-            </el-button>
+            <div style="display: flex; align-items: center; justify-content: flex-start; gap: 6px; white-space: nowrap;">
+              <el-button link type="primary" size="small" @click="viewDetail(scope.row)">
+                查看详情
+              </el-button>
+              <el-button link type="primary" size="small" @click="exportExcel(scope.row)">
+                导出Excel
+              </el-button>
+              <el-button v-if="scope.row.status === 2" link type="warning" size="small" @click="handleResubmit(scope.row)">
+                重新修改
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -69,8 +70,7 @@
       >
         <div class="card-header">
           <div class="header-left">
-            <span class="month-text">{{ item.submitMonth }}</span>
-            <div class="task-name-text">{{ item.taskName || '无任务名称' }}</div>
+            <span class="month-text">{{ item.taskName || '无任务' }}</span>
           </div>
           <el-tag :type="getStatusType(item.status)" size="small">
             {{ getStatusLabel(item.status) }}
@@ -86,8 +86,8 @@
           <el-button link type="primary" size="small" @click="viewDetail(item)">
             查看详情
           </el-button>
-          <el-button link type="primary" size="small" @click="exportPdf(item)">
-            导出PDF
+          <el-button link type="success" size="small" @click="exportExcel(item)">
+            导出Excel
           </el-button>
           <el-button v-if="item.status === 2" link type="danger" size="small" @click="handleResubmit(item)">
             重新修改
@@ -110,7 +110,7 @@
     <!-- 详情弹窗 -->
     <el-dialog 
       v-model="detailVisible" 
-      :title="'提交详情 — ' + (detailData?.submitMonth || '')" 
+      :title="'提交详情 — ' + (detailData?.taskName || '')" 
       width="700px"
       :fullscreen="isMobile"
       destroy-on-close
@@ -245,7 +245,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getSubmissionHistory, getSubmissionDetail } from '../../api/teacher'
+import { getSubmissionHistory, getSubmissionDetail, exportMySubmission } from '../../api/teacher'
 import dayjs from 'dayjs'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
@@ -260,13 +260,15 @@ const pageSize = ref(10)
 const loading = ref(false)
 const tableData = ref([])
 
-const statusMap = { 0: '审核中', 1: '已归档', 2: '被退回' }
+const statusMap = { 0: '审核中', 1: '已归档', 2: '被退回', 3: '待终审', 4: '终审退回' }
 const getStatusLabel = (status) => statusMap[status] || '未知'
 const getStatusType = (status) => {
   switch (status) {
     case 1: return 'success'
     case 0: return 'warning'
     case 2: return 'danger'
+    case 3: return ''
+    case 4: return 'info'
     default: return 'info'
   }
 }
@@ -324,11 +326,24 @@ const viewDetail = async (row) => {
 }
 
 const handleResubmit = (row) => {
-  router.push({ path: '/teacher/info-fill', query: { resubmitId: row.id } })
+  router.push({ path: '/teacher/info-fill', query: { resubmitId: row.id, taskId: row.taskId } })
 }
 
-const exportPdf = (row) => {
-  ElMessage.info('导出PDF功能开发中，敬请期待')
+const exportExcel = async (row) => {
+  try {
+    const res = await exportMySubmission(row.id)
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${row.taskName || '提交'}_教学科研数据.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败', error)
+    ElMessage.error('导出失败，请稍后重试')
+  }
 }
 
 onMounted(() => {
@@ -468,12 +483,15 @@ onMounted(() => {
       .card-footer {
         display: flex;
         justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
         border-top: 1px solid var(--color-border);
         padding-top: 12px;
         
         .el-button {
           margin-left: 0;
+          margin-bottom: 4px;
         }
       }
     }

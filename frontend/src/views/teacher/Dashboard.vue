@@ -313,6 +313,10 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   padding-bottom: 40px;
   font-family: var(--font-body);
+  
+  * {
+    box-sizing: border-box;
+  }
 }
 
 /* Task Banner */
@@ -389,6 +393,7 @@ onBeforeUnmount(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+    padding: 16px; /* Decrease massive paddings for mobile screens */
 
     .task-action {
       margin-left: 0;
@@ -429,6 +434,8 @@ onBeforeUnmount(() => {
       color: var(--color-text);
       margin: 0 0 8px;
       letter-spacing: -0.02em;
+      word-break: break-word; /* Ensure long names break properly */
+      white-space: normal;
     }
     
     .welcome-subtitle {
@@ -783,6 +790,7 @@ onBeforeUnmount(() => {
       height: 6px;
       border-radius: 50%;
       background: #E4E4E7;
+      flex-shrink: 0; /* Prevent dot from shrinking */
     }
     
     .text {
@@ -793,11 +801,13 @@ onBeforeUnmount(() => {
       white-space: nowrap;
       text-overflow: ellipsis;
       transition: color 0.2s;
+      min-width: 0; /* CRITICAL: allows flex child to shrink and trigger ellipsis */
     }
     
     .date {
-      font-size: 12px;
-      color: #A1A1AA;
+      font-size: 13px;
+      color: var(--color-text-light);
+      flex-shrink: 0; /* Prevent date from shrinking */
       font-variant-numeric: tabular-nums;
     }
   }
@@ -918,6 +928,21 @@ onBeforeUnmount(() => {
       gap: 16px;
     }
 
+    .section-card {
+      padding: 16px;
+    }
+
+    .task-deadline-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      
+      .countdown-tag {
+        align-self: flex-start;
+      }
+    }
+
     /* Nested properly to override previous styles */
     .status-timeline {
       flex-direction: column;
@@ -948,9 +973,16 @@ onBeforeUnmount(() => {
           align-items: flex-start;
           text-align: left;
           flex: 1;
+          min-width: 0; /* Let flex item shrink below content width */
           
           .step-title {
             font-size: 15px;
+            white-space: normal;
+            word-break: break-word;
+          }
+          .step-desc {
+            white-space: normal;
+            word-break: break-word;
           }
         }
       }

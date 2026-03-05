@@ -96,11 +96,11 @@ CREATE TABLE users (
 INSERT INTO users (username, password, real_name, role_id, dept_id) VALUES
     ('admin', '$2a$10$jv3/Z2EzboEYdR0twTrfluUHDZLIIJtJJigfua98LMRhUt2oTbGnOa', '超级管理员', 1, 7);
 
--- 预置教师账号 (密码需通过 /api/dev/reset-password 设置)
+-- 预置教师账号 (默认密码: 123456)
 INSERT INTO users (username, password, real_name, employee_no, role_id, dept_id, title, gender) VALUES
-    ('zhangsan', 'NEED_RESET', '张三', 'T2024001', 2, 1, '副教授',  1),
-    ('lisi',     'NEED_RESET', '李四', 'T2024002', 2, 2, '讲师',    2),
-    ('wangwu',   'NEED_RESET', '王五', 'T2024003', 2, 3, '教授',    1);
+    ('zhangsan', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6CQARREhCQJnknOYdVQ7TCZJK', '张三', 'T2024001', 2, 1, '副教授',  1),
+    ('lisi',     '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6CQARREhCQJnknOYdVQ7TCZJK', '李四', 'T2024002', 2, 2, '讲师',    2),
+    ('wangwu',   '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6CQARREhCQJnknOYdVQ7TCZJK', '王五', 'T2024003', 2, 3, '教授',    1);
 
 -- ============================================================
 -- 4. 分类表 (categories)

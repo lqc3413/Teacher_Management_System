@@ -41,6 +41,44 @@ const routes = [
       }
     ]
   },
+  // 部门主任端路由（复用 TeacherLayout，附加部门审核功能）
+  {
+    path: '/dept-director',
+    component: () => import('../layout/TeacherLayout.vue'),
+    meta: { requiresAuth: true, role: 'dept_director' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'DeptDirectorDashboard',
+        component: () => import('../views/teacher/Dashboard.vue')
+      },
+      {
+        path: 'audit',
+        name: 'DeptAudit',
+        component: () => import('../views/dept-director/DeptAudit.vue')
+      },
+      {
+        path: 'info-fill',
+        name: 'DeptInfoFill',
+        component: () => import('../views/teacher/InfoFill.vue')
+      },
+      {
+        path: 'history',
+        name: 'DeptHistory',
+        component: () => import('../views/teacher/History.vue')
+      },
+      {
+        path: 'achievements',
+        name: 'DeptAchievements',
+        component: () => import('../views/teacher/Achievements.vue')
+      },
+      {
+        path: 'profile',
+        name: 'DeptProfile',
+        component: () => import('../views/profile/Profile.vue')
+      }
+    ]
+  },
   // 管理员端路由
   {
     path: '/admin',
@@ -105,21 +143,44 @@ const router = createRouter({
 })
 
 /**
- * 路由守卫 — 未登录用户跳转到登录页
+ * 路由守卫 — 未登录用户跳转到登录页，已登录用户校验角色
  */
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  // 统一转小写，防止大小写不一致导致匹配失败
+  const role = token ? (localStorage.getItem('role') || '').toLowerCase() : null
+
+  // 根据角色获取对应的 Dashboard 路径
+  function getDashboardPath(r) {
+    if (r === 'admin') return '/admin/dashboard'
+    if (r === 'dept_director') return '/dept-director/dashboard'
+    return '/teacher/dashboard'
+  }
 
   if (to.meta.requiresAuth !== false && !token) {
     // 需要登录但没有 Token，跳转到登录页
     next({ path: '/' })
   } else if (to.path === '/' && token) {
     // 已登录用户访问登录页，跳转到对应 Dashboard
-    const role = localStorage.getItem('role')
-    if (role === 'admin') {
-      next({ path: '/admin/dashboard' })
+    next({ path: getDashboardPath(role) })
+  } else if (token && to.meta.role) {
+    // 已登录用户访问受保护路由时，校验角色是否匹配
+    const routeRole = to.meta.role
+
+    // 部门主任可以访问教师端路由（因为同时拥有教师权限）
+    const isAllowed = routeRole === role ||
+      (role === 'dept_director' && routeRole === 'teacher')
+
+    if (!isAllowed) {
+      const target = getDashboardPath(role)
+      // 如果目标路径就是当前路径，直接放行，避免无限重定向
+      if (to.path === target) {
+        next()
+      } else {
+        next({ path: target })
+      }
     } else {
-      next({ path: '/teacher/dashboard' })
+      next()
     }
   } else {
     next()
@@ -127,3 +188,4 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+

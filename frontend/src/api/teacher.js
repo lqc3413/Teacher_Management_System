@@ -110,3 +110,26 @@ export function updateBasicInfo(data) {
         data
     })
 }
+
+/**
+ * 导出个人某次提交的详情为 Excel
+ * @param {Number} id - 提交记录 ID
+ */
+export function exportMySubmission(id) {
+    return request({
+        url: `/teacher/export/${id}`,
+        method: 'get',
+        responseType: 'blob'
+    })
+}
+
+/**
+ * 导出教师全部已通过的成果数据为 Excel
+ */
+export function exportAllAchievements() {
+    return request({
+        url: '/teacher/export/achievements',
+        method: 'get',
+        responseType: 'blob'
+    })
+}

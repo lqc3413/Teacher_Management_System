@@ -33,6 +33,7 @@
                 placeholder="请输入密码" 
                 prefix-icon="Lock"
                 show-password
+                @keyup.enter="handleLogin('teacher')"
               />
             </el-form-item>
             <el-form-item>
@@ -71,6 +72,7 @@
                 placeholder="请输入密码" 
                 prefix-icon="Lock"
                 show-password
+                @keyup.enter="handleLogin('admin')"
               />
             </el-form-item>
             <el-form-item>
@@ -150,7 +152,9 @@ const handleLogin = async (role) => {
       localStorage.setItem('role', res.data.role)
       
       ElMessage.success('登录成功！')
-      router.push(role === 'admin' ? '/admin/dashboard' : '/teacher/dashboard')
+      const actualRole = res.data.role
+      const dashboardMap = { admin: '/admin/dashboard', dept_director: '/dept-director/dashboard' }
+      router.push(dashboardMap[actualRole] || '/teacher/dashboard')
     } catch (error) {
       console.error('登录失败:', error)
     } finally {

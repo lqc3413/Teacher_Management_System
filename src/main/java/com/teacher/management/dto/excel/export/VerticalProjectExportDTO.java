@@ -1,16 +1,21 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
 import com.alibaba.excel.annotation.write.style.ContentRowHeight;
 import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
-/**
- * 纵向项目/横向项目共用 ExcelDTO
- */
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class ResearchProjectExcelDTO {
+public class VerticalProjectExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("教研/科研")
     @ColumnWidth(14)
     private String researchType;
@@ -29,7 +34,7 @@ public class ResearchProjectExcelDTO {
 
     @ExcelProperty("团队成员")
     @ColumnWidth(30)
-    private String teamMembersStr;
+    private String teamMembers;
 
     @ExcelProperty("立项时间")
     @ColumnWidth(18)
@@ -50,6 +55,22 @@ public class ResearchProjectExcelDTO {
     @ExcelProperty("项目经费（元）")
     @ColumnWidth(16)
     private String funds;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getResearchType() {
         return researchType;
@@ -83,12 +104,12 @@ public class ResearchProjectExcelDTO {
         this.level = level;
     }
 
-    public String getTeamMembersStr() {
-        return teamMembersStr;
+    public String getTeamMembers() {
+        return teamMembers;
     }
 
-    public void setTeamMembersStr(String teamMembersStr) {
-        this.teamMembersStr = teamMembersStr;
+    public void setTeamMembers(String teamMembers) {
+        this.teamMembers = teamMembers;
     }
 
     public String getSetupDate() {

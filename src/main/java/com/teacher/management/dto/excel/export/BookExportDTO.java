@@ -1,4 +1,4 @@
-package com.teacher.management.dto.excel;
+package com.teacher.management.dto.excel.export;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
@@ -7,7 +7,15 @@ import com.alibaba.excel.annotation.write.style.HeadRowHeight;
 
 @HeadRowHeight(30)
 @ContentRowHeight(22)
-public class BookExcelDTO {
+public class BookExportDTO {
+    @ExcelProperty("教师姓名")
+    @ColumnWidth(16)
+    private String teacherName;
+
+    @ExcelProperty("工号")
+    @ColumnWidth(14)
+    private String employeeNo;
+
     @ExcelProperty("著作名称")
     @ColumnWidth(28)
     private String name;
@@ -18,11 +26,11 @@ public class BookExcelDTO {
 
     @ExcelProperty("出版日期")
     @ColumnWidth(16)
-    private String date;
+    private String publishDate;
 
     @ExcelProperty("教材等级")
     @ColumnWidth(20)
-    private String level;
+    private String textbookLevel;
 
     @ExcelProperty("本人排名")
     @ColumnWidth(14)
@@ -31,6 +39,22 @@ public class BookExcelDTO {
     @ExcelProperty("入选日期")
     @ColumnWidth(16)
     private String selectionDate;
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public String getEmployeeNo() {
+        return employeeNo;
+    }
+
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+    }
 
     public String getName() {
         return name;
@@ -48,20 +72,20 @@ public class BookExcelDTO {
         this.publisher = publisher;
     }
 
-    public String getDate() {
-        return date;
+    public String getPublishDate() {
+        return publishDate;
     }
 
-    public void setDate(String date) {
-        this.date = date;
+    public void setPublishDate(String publishDate) {
+        this.publishDate = publishDate;
     }
 
-    public String getLevel() {
-        return level;
+    public String getTextbookLevel() {
+        return textbookLevel;
     }
 
-    public void setLevel(String level) {
-        this.level = level;
+    public void setTextbookLevel(String textbookLevel) {
+        this.textbookLevel = textbookLevel;
     }
 
     public Integer getRank() {

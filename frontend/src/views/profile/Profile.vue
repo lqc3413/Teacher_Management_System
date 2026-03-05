@@ -11,7 +11,7 @@
             </div>
             <h2 class="username">{{ infoForm.realName }}</h2>
             <div class="role-badge">
-              <el-tag effect="dark" type="success" round>教师</el-tag>
+              <el-tag effect="dark" :type="currentRole === 'admin' ? 'primary' : 'success'" round>{{ currentRole === 'admin' ? '管理员' : '教师' }}</el-tag>
             </div>
             
             <el-divider />
@@ -75,8 +75,8 @@
                   <el-col :span="12">
                      <el-form-item label="性别" prop="gender">
                       <el-radio-group v-model="infoForm.gender">
-                        <el-radio :label="1" border>男</el-radio>
-                        <el-radio :label="2" border>女</el-radio>
+                        <el-radio :value="1" border>男</el-radio>
+                        <el-radio :value="2" border>女</el-radio>
                       </el-radio-group>
                     </el-form-item>
                   </el-col>
@@ -153,8 +153,8 @@
               </el-form>
             </el-tab-pane>
 
-            <!-- 学历职称 -->
-            <el-tab-pane label="学历职称" name="education">
+            <!-- 学历职称（仅教师角色显示） -->
+            <el-tab-pane v-if="currentRole === 'teacher'" label="学历职称" name="education">
               <el-form
                 ref="eduFormRef"
                 :model="eduForm"
@@ -211,8 +211,8 @@
                   <el-col :span="12">
                     <el-form-item label="是否双师型">
                       <el-radio-group v-model="eduForm.isDualTeacher">
-                        <el-radio :label="1" border>是</el-radio>
-                        <el-radio :label="0" border>否</el-radio>
+                        <el-radio :value="1" border>是</el-radio>
+                        <el-radio :value="0" border>否</el-radio>
                       </el-radio-group>
                     </el-form-item>
                   </el-col>
@@ -250,6 +250,7 @@ const infoFormRef = ref(null)
 const pwdFormRef = ref(null)
 const eduFormRef = ref(null)
 const deptMap = ref({})
+const currentRole = ref(localStorage.getItem('role') || 'teacher')
 
 // 个人资料
 const infoForm = reactive({
@@ -344,7 +345,10 @@ const initData = async () => {
 
 onMounted(() => {
   initData()
-  loadEduInfo()
+  // 学历职称仅教师角色加载
+  if (currentRole.value === 'teacher') {
+    loadEduInfo()
+  }
 })
 
 // 学历职称

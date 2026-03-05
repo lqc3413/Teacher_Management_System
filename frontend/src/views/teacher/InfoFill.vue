@@ -40,7 +40,7 @@
     <!-- 退回提示 -->
     <el-alert
       v-if="isResubmit"
-      :title="'该提交（' + resubmitMonth + '）已被退回'"
+      :title="'该提交已被退回'"
       type="warning"
       :description="resubmitRemark ? '退回原因：' + resubmitRemark : '请修改后重新提交'"
       show-icon
@@ -881,7 +881,7 @@
         <h3 class="success-title">提交成功 !</h3>
         
         <div class="success-desc">
-          <p>提交月份 <span class="highlight">{{ lastSubmitMonth }}</span></p>
+          <p>任务名称 <span class="highlight">{{ lastTaskName }}</span></p>
           <div class="status-row">
             当前状态 <span class="status-badge">审核中</span>
           </div>
@@ -914,7 +914,7 @@ const router = useRouter()
 const route = useRoute()
 const submitting = ref(false)
 const successVisible = ref(false)
-const lastSubmitMonth = ref('')
+const lastTaskName = ref('')
 const excelUploading = ref(false)
 
 // 任务驱动状态
@@ -971,7 +971,7 @@ const handleExcelUpload = async (file) => {
     await importExcelData(fd)
     ElMessage.success('Excel 数据导入成功！')
     successVisible.value = true
-    lastSubmitMonth.value = dayjs().format('YYYY-MM')
+    lastTaskName.value = currentTaskName.value || '当前任务'
   } catch (e) {
     ElMessage.error('导入失败：' + (e.message || '未知错误'))
   } finally {
@@ -1248,7 +1248,7 @@ const handleSubmit = async () => {
       await submitTeacherInfo(payload)
       
       // 成功后显示自定义弹窗
-      lastSubmitMonth.value = payload.submitMonth
+      lastTaskName.value = currentTaskName.value || payload.submitMonth
       successVisible.value = true
       
     } catch (e) {

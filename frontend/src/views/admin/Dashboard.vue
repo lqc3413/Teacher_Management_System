@@ -90,11 +90,6 @@
       <el-table :data="pendingList" style="width: 100%" v-loading="loading">
         <el-table-column prop="teacherName" label="教师姓名" width="120" />
         <el-table-column prop="deptName" label="所在学院" show-overflow-tooltip />
-        <el-table-column prop="submitMonth" label="申报月份" width="120">
-          <template #default="{ row }">
-            <el-tag size="small" effect="plain">{{ row.submitMonth }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="taskName" label="任务名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="createTime" label="提交时间" width="180">
           <template #default="{ row }">

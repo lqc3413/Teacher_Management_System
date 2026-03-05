@@ -115,7 +115,7 @@ export function getAdminStats() {
 
 /**
  * 获取所有教师提交记录
- * @param {Object} params - { pageNum, pageSize, status, submitMonth }
+ * @param {Object} params - { pageNum, pageSize, status, deptId }
  */
 export function getSubmissionList(params) {
     return request({
@@ -244,5 +244,30 @@ export function deleteTask(id) {
     return request({
         url: `/admin/task/delete/${id}`,
         method: 'delete'
+    })
+}
+
+/**
+ * 批量导出提交数据
+ * @param {Object} params - { status, deptId }
+ */
+export function exportSubmissions(params) {
+    return request({
+        url: '/admin/export',
+        method: 'get',
+        params,
+        responseType: 'blob'
+    })
+}
+
+/**
+ * 导出单条提交详情
+ * @param {Number} id - 提交记录 ID
+ */
+export function exportSingleSubmission(id) {
+    return request({
+        url: `/admin/export/${id}`,
+        method: 'get',
+        responseType: 'blob'
     })
 }
