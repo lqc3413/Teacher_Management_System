@@ -96,7 +96,8 @@ public class UserController {
         userService.updateById(user);
 
         // 生成 JWT Token
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRoleId(), role);
+        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRoleId(), role,
+                user.getDeptId());
 
         // 构造返回数据（隐藏密码）
         user.setPassword(null);
@@ -210,9 +211,8 @@ public class UserController {
             return Result.error("新密码长度不能少于 6 位");
         }
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        User user = userService.getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        Long userId = com.teacher.management.utils.SecurityUtils.getCurrentUserId();
+        User user = userService.getById(userId);
 
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             return Result.error("原密码错误");
@@ -228,9 +228,8 @@ public class UserController {
      */
     @PutMapping("/profile")
     public Result<?> updateProfile(@RequestBody User user) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        User currentUser = userService.getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        Long currentUserId = com.teacher.management.utils.SecurityUtils.getCurrentUserId();
+        User currentUser = userService.getById(currentUserId);
 
         if (user.getRealName() != null)
             currentUser.setRealName(user.getRealName());

@@ -293,7 +293,8 @@ onMounted(async () => {
     const taskRes = await getCurrentTask()
     if (taskRes.data && taskRes.data.task) {
       activeTask.value = taskRes.data.task
-      taskSubmitted.value = taskRes.data.hasSubmitted || false
+      // 只有提交存在且不可重提时才标记已提交（被驳回/退回的可以继续填报）
+      taskSubmitted.value = taskRes.data.submissionExists && !taskRes.data.canResubmit
       updateCountdown()
       countdownTimer = setInterval(updateCountdown, 60000) // 每分钟更新
     }

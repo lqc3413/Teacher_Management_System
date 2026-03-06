@@ -12,10 +12,11 @@ import com.teacher.management.mapper.SubmissionMapper;
 import com.teacher.management.mapper.UserMapper;
 import com.teacher.management.service.IMessageService;
 import com.teacher.management.service.TeacherService;
+import com.teacher.management.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +27,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/teacher")
 public class TeacherController {
+
+    private static final Logger log = LoggerFactory.getLogger(TeacherController.class);
 
     @Autowired
     private TeacherService teacherService;
@@ -42,79 +45,90 @@ public class TeacherController {
     @Autowired
     private CollectionTaskMapper collectionTaskMapper;
 
-    /**
-     * 提交当月教学科研信息
-     */
+    // Load the current user only when entity fields are needed by the endpoint.
+    private User getCurrentUser() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return null;
+        }
+        return userMapper.selectById(userId);
+    }
+
+    // Always use the latest submission for a task and warn if historical duplicates exist.
+    private Submission getLatestSubmissionForTask(Long userId, Long taskId) {
+        if (userId == null || taskId == null) {
+            return null;
+        }
+
+        QueryWrapper<Submission> latestQuery = new QueryWrapper<>();
+        latestQuery.eq("user_id", userId)
+                .eq("task_id", taskId)
+                .orderByDesc("create_time")
+                .orderByDesc("id")
+                .last("LIMIT 1");
+        Submission latest = submissionMapper.selectOne(latestQuery);
+
+        if (latest != null) {
+            QueryWrapper<Submission> countQuery = new QueryWrapper<>();
+            countQuery.eq("user_id", userId).eq("task_id", taskId);
+            Long dupCount = submissionMapper.selectCount(countQuery);
+            if (dupCount > 1) {
+                log.warn("Detected duplicate submissions: userId={}, taskId={}, count={}", userId, taskId, dupCount);
+            }
+        }
+
+        return latest;
+    }
+
     @PostMapping("/submit")
     public Result<?> submit(@RequestBody TeacherSubmitDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("username", username);
-        User user = userMapper.selectOne(query);
-
+        User user = getCurrentUser();
         if (user == null) {
-            return Result.error("用户不存在");
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         try {
             Long submissionId = teacherService.submitInfo(user.getId(), dto);
 
-            // 发送通知给所有管理员
-            String teacherName = user.getRealName() != null ? user.getRealName() : username;
+            String teacherName = user.getRealName() != null ? user.getRealName() : user.getUsername();
             messageService.sendToAllAdmins(
-                    1, // type=1: 提交通知
+                    1,
                     user.getId(),
                     submissionId,
-                    "新的教学科研信息提交",
-                    "教师 " + teacherName + " 提交了教学科研信息，请审核。");
+                    "\u65b0\u7684\u6559\u5b66\u79d1\u7814\u4fe1\u606f\u63d0\u4ea4",
+                    "\u6559\u5e08 " + teacherName + " \u63d0\u4ea4\u4e86\u6559\u5b66\u79d1\u7814\u4fe1\u606f\uff0c\u8bf7\u5ba1\u6838\u3002");
 
             Map<String, Object> data = new HashMap<>();
             data.put("submissionId", submissionId);
-            data.put("status", "审核中");
+            data.put("status", "\u5ba1\u6838\u4e2d");
 
             return Result.success(data);
         } catch (Exception e) {
-            return Result.error("提交失败：" + e.getMessage());
+            return Result.error("\u63d0\u4ea4\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 查询提交历史记录
-     * 
-     * @param year 可选年份筛选，如 "2026"
-     * @param page 页码，默认 1
-     * @param size 每页条数，默认 10
-     */
     @GetMapping("/history")
     public Result<?> history(
             @RequestParam(required = false) String year,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            return Result.error("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         QueryWrapper<Submission> sq = new QueryWrapper<>();
-        sq.eq("user_id", user.getId());
+        sq.eq("user_id", userId);
         if (year != null && !year.isEmpty()) {
             sq.apply("YEAR(create_time) = {0}", year);
         }
         sq.orderByDesc("create_time");
 
-        // new Page object
         Page<Submission> pageObj = new Page<>(page, size);
         Page<Submission> result = submissionMapper.selectPage(pageObj, sq);
 
-        // 批量查询任务名称
         Set<Long> taskIds = result.getRecords().stream()
                 .map(Submission::getTaskId)
                 .filter(Objects::nonNull)
@@ -127,7 +141,6 @@ public class TeacherController {
             }
         }
 
-        // 组装返回数据
         List<Map<String, Object>> records = new ArrayList<>();
         for (Submission sub : result.getRecords()) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -140,9 +153,9 @@ public class TeacherController {
             item.put("createTime", sub.getCreateTime());
 
             if (sub.getTaskId() != null) {
-                item.put("taskName", taskMap.getOrDefault(sub.getTaskId(), "未知任务"));
+                item.put("taskName", taskMap.getOrDefault(sub.getTaskId(), "\u672a\u77e5\u4efb\u52a1"));
             } else {
-                item.put("taskName", "历史提交");
+                item.put("taskName", "\u5386\u53f2\u63d0\u4ea4");
             }
             records.add(item);
         }
@@ -154,31 +167,20 @@ public class TeacherController {
         return Result.success(data);
     }
 
-    /**
-     * 查看某次提交的详情
-     */
     @GetMapping("/detail/{id}")
     public Result<?> detail(@PathVariable Long id) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            return Result.error("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
-        com.teacher.management.vo.SubmissionDetailVO detail = teacherService.getSubmissionDetail(id, user.getId());
+        com.teacher.management.vo.SubmissionDetailVO detail = teacherService.getSubmissionDetail(id, userId);
         if (detail == null) {
-            return Result.error("未找到该提交记录");
+            return Result.error("\u672a\u627e\u5230\u8be5\u63d0\u4ea4\u8bb0\u5f55");
         }
         return Result.success(detail);
     }
 
-    /**
-     * 获取当前进行中的采集任务
-     */
     @GetMapping("/task/current")
     public Result<?> currentTask() {
         QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
@@ -188,47 +190,45 @@ public class TeacherController {
         CollectionTask task = collectionTaskMapper.selectOne(tq);
 
         if (task == null) {
-            return Result.success(null); // 无活动任务
+            return Result.success(null);
         }
 
-        // 检查当前用户是否已对此任务提交
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
+        Long userId = SecurityUtils.getCurrentUserId();
 
-        boolean hasSubmitted = false;
-        if (user != null) {
-            QueryWrapper<Submission> sq = new QueryWrapper<>();
-            sq.eq("user_id", user.getId()).eq("task_id", task.getId());
-            hasSubmitted = submissionMapper.selectCount(sq) > 0;
+        boolean submissionExists = false;
+        Integer submissionStatus = null;
+        boolean canResubmit = false;
+        Long resubmitSubmissionId = null;
+
+        if (userId != null) {
+            Submission latest = getLatestSubmissionForTask(userId, task.getId());
+            if (latest != null) {
+                submissionExists = true;
+                submissionStatus = latest.getStatus();
+                canResubmit = (submissionStatus == 2 || submissionStatus == 4);
+                if (canResubmit) {
+                    resubmitSubmissionId = latest.getId();
+                }
+            }
         }
 
         Map<String, Object> data = new HashMap<>();
         data.put("task", task);
-        data.put("hasSubmitted", hasSubmitted);
+        data.put("submissionExists", submissionExists);
+        data.put("submissionStatus", submissionStatus);
+        data.put("canResubmit", canResubmit);
+        data.put("resubmitSubmissionId", resubmitSubmissionId);
+        data.put("hasSubmitted", submissionExists);
         return Result.success(data);
     }
 
-    /**
-     * Dashboard 统计数据
-     */
     @GetMapping("/dashboard")
     public Result<?> dashboard() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            return Result.error("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
-        Long userId = user.getId();
-
-        // 1. 查询当前活动任务，判断是否已提交
         QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
         tq.eq("status", 1)
                 .le("start_time", LocalDateTime.now())
@@ -238,20 +238,16 @@ public class TeacherController {
         boolean isSubmitted = false;
         LocalDateTime submitTime = null;
         if (activeTask != null) {
-            QueryWrapper<Submission> sq = new QueryWrapper<>();
-            sq.eq("user_id", userId).eq("task_id", activeTask.getId());
-            Submission currentSub = submissionMapper.selectOne(sq);
+            Submission currentSub = getLatestSubmissionForTask(userId, activeTask.getId());
             isSubmitted = currentSub != null;
             submitTime = currentSub != null ? currentSub.getCreateTime() : null;
         }
 
-        // 2. 本年度累计填报次数
         String currentYear = String.valueOf(java.time.LocalDate.now().getYear());
         QueryWrapper<Submission> yearQuery = new QueryWrapper<>();
         yearQuery.eq("user_id", userId).apply("YEAR(create_time) = {0}", currentYear);
         Long yearlyCount = submissionMapper.selectCount(yearQuery);
 
-        // 3. 累计成果数
         int totalAchievements = teacherService.countAchievements(userId);
 
         Map<String, Object> data = new HashMap<>();
@@ -263,143 +259,97 @@ public class TeacherController {
         return Result.success(data);
     }
 
-    /**
-     * 获取当前教师的全部成果聚合数据
-     */
     @GetMapping("/achievements")
     public Result<?> achievements() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            return Result.error("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         try {
-            com.teacher.management.vo.AchievementGroupVO vo = teacherService.getAchievements(user.getId());
+            com.teacher.management.vo.AchievementGroupVO vo = teacherService.getAchievements(userId);
             return Result.success(vo);
         } catch (Exception e) {
             e.printStackTrace();
-            return Result.error("获取成果数据失败：" + e.getMessage());
+            return Result.error("\u83b7\u53d6\u6210\u679c\u6570\u636e\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 下载 Excel 标准模板
-     */
     @GetMapping("/excel/template")
     public void downloadTemplate(HttpServletResponse response) {
         try {
             teacherService.downloadTemplate(response);
         } catch (Exception e) {
-            throw new RuntimeException("模板下载失败：" + e.getMessage());
+            throw new RuntimeException("\u6a21\u677f\u4e0b\u8f7d\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 导出个人某次提交的详情为 Excel
-     */
     @GetMapping("/export/{id}")
     public void exportSubmission(@PathVariable Long id, HttpServletResponse response) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new RuntimeException("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
-        // 校验提交归属
         Submission sub = submissionMapper.selectById(id);
-        if (sub == null || !sub.getUserId().equals(user.getId())) {
-            throw new RuntimeException("无权访问该提交记录");
+        if (sub == null || !sub.getUserId().equals(userId)) {
+            throw new RuntimeException("\u65e0\u6743\u8bbf\u95ee\u8be5\u63d0\u4ea4\u8bb0\u5f55");
         }
 
         try {
             teacherService.exportSingleSubmission(id, response);
         } catch (Exception e) {
-            throw new RuntimeException("导出失败：" + e.getMessage());
+            throw new RuntimeException("\u5bfc\u51fa\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 导出教师全部已通过的成果数据为 Excel
-     */
     @GetMapping("/export/achievements")
     public void exportAllAchievements(HttpServletResponse response) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+        Long userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new RuntimeException("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         try {
-            teacherService.exportAllAchievements(user.getId(), response);
+            teacherService.exportAllAchievements(userId, response);
         } catch (Exception e) {
-            throw new RuntimeException("导出失败：" + e.getMessage());
+            throw new RuntimeException("\u5bfc\u51fa\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 上传 Excel 导入数据
-     */
     @PostMapping("/excel/import")
     public Result<?> importExcel(@RequestParam("file") MultipartFile file,
             @RequestParam("taskId") Long taskId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("username", username);
-        User user = userMapper.selectOne(query);
-
+        User user = getCurrentUser();
         if (user == null) {
-            return Result.error("用户不存在");
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         try {
             Long submissionId = teacherService.importExcel(user.getId(), taskId, file);
 
-            // 发送通知给所有管理员
-            String teacherName = user.getRealName() != null ? user.getRealName() : username;
+            String teacherName = user.getRealName() != null ? user.getRealName() : user.getUsername();
             messageService.sendToAllAdmins(
                     1,
                     user.getId(),
                     submissionId,
-                    "Excel 批量数据导入",
-                    "教师 " + teacherName + " 通过 Excel 导入了教学科研信息，请审核。");
+                    "Excel \u6279\u91cf\u6570\u636e\u5bfc\u5165",
+                    "\u6559\u5e08 " + teacherName + " \u901a\u8fc7 Excel \u5bfc\u5165\u4e86\u6559\u5b66\u79d1\u7814\u4fe1\u606f\uff0c\u8bf7\u5ba1\u6838\u3002");
 
             Map<String, Object> data = new HashMap<>();
             data.put("submissionId", submissionId);
-            data.put("status", "审核中");
+            data.put("status", "\u5ba1\u6838\u4e2d");
             return Result.success(data);
         } catch (Exception e) {
-            return Result.error("导入失败：" + e.getMessage());
+            return Result.error("\u5bfc\u5165\u5931\u8d25\uff1a" + e.getMessage());
         }
     }
 
-    /**
-     * 查询当前用户的学历/职称信息
-     */
     @GetMapping("/basic-info")
     public Result<?> getBasicInfo() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
+        User user = getCurrentUser();
         if (user == null) {
-            return Result.error("用户不存在");
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -414,19 +364,11 @@ public class TeacherController {
         return Result.success(data);
     }
 
-    /**
-     * 更新当前用户的学历/职称信息
-     */
     @PutMapping("/basic-info")
     public Result<?> updateBasicInfo(@RequestBody Map<String, Object> body) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        QueryWrapper<User> uq = new QueryWrapper<>();
-        uq.eq("username", username);
-        User user = userMapper.selectOne(uq);
+        User user = getCurrentUser();
         if (user == null) {
-            return Result.error("用户不存在");
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         user.setEducation((String) body.get("education"));
@@ -440,6 +382,6 @@ public class TeacherController {
         user.setSkillCert((String) body.get("skillCert"));
 
         userMapper.updateById(user);
-        return Result.success("学历/职称信息更新成功");
+        return Result.success("\u5b66\u5386/\u804c\u79f0\u4fe1\u606f\u66f4\u65b0\u6210\u529f");
     }
 }

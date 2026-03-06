@@ -57,6 +57,14 @@ export function getAchievements() {
 
 /**
  * 获取当前进行中的采集任务
+ * @returns {Promise<{data: {
+ *   task: Object,                  // 当前任务对象
+ *   submissionExists: boolean,     // 是否有提交记录
+ *   submissionStatus: number|null, // 最新提交状态 (0=待初审,1=已归档,2=已驳回,3=待终审,4=终审退回)
+ *   canResubmit: boolean,          // 是否允许重提 (status=2或4时为true)
+ *   resubmitSubmissionId: number|null, // 可重提时对应的 submission ID
+ *   hasSubmitted: boolean          // [过渡字段] 等价于 submissionExists，后续移除
+ * }}>}
  */
 export function getCurrentTask() {
     return request({

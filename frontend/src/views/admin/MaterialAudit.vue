@@ -189,7 +189,7 @@
                   :key="col.prop" 
                   :label="col.label"
                 >
-                  {{ detailData[key][col.prop] }}
+                  {{ detailData[key][col.prop] || '—' }}
                 </el-descriptions-item>
               </el-descriptions>
             </el-card>

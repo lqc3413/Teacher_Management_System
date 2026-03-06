@@ -212,13 +212,8 @@ public class AdminController {
 
         // 发送通知给对应教师
         try {
-            // 获取当前管理员的 userId
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String adminUsername = auth.getName();
-            QueryWrapper<User> adminQuery = new QueryWrapper<>();
-            adminQuery.eq("username", adminUsername);
-            User adminUser = userMapper.selectOne(adminQuery);
-            Long adminId = adminUser != null ? adminUser.getId() : null;
+            // 获取当前管理员的 userId（直接从 JWT 取，无需查库）
+            Long adminId = com.teacher.management.utils.SecurityUtils.getCurrentUserId();
 
             if (status == Submission.STATUS_APPROVED) {
                 // 终审通过

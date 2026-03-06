@@ -51,14 +51,13 @@ public class DeptDirectorController {
     private TeacherService teacherService;
 
     /**
-     * 获取当前登录的部门主任用户信息
+     * 获取当前登录的部门主任用户信息（通过 JWT userId，主键查询）
      */
     private User getCurrentDirector() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("username", username);
-        return userMapper.selectOne(query);
+        Long userId = com.teacher.management.utils.SecurityUtils.getCurrentUserId();
+        if (userId == null)
+            return null;
+        return userMapper.selectById(userId);
     }
 
     /**

@@ -14,7 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * JWT 认证过滤器
@@ -59,6 +61,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             username,
                             null,
                             authorities);
+
+                    // 将 JWT claims 中的用户信息存入 details，供 SecurityUtils 零查询访问
+                    Map<String, Object> details = new HashMap<>();
+                    details.put("userId", claims.get("userId", Long.class));
+                    details.put("roleId", claims.get("roleId", Long.class));
+                    Long deptId = claims.get("deptId", Long.class);
+                    if (deptId != null) {
+                        details.put("deptId", deptId);
+                    }
+                    authentication.setDetails(details);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }

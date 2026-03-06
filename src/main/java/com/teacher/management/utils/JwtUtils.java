@@ -32,18 +32,23 @@ public class JwtUtils {
 
     /**
      * 生成 JWT Token
+     * 
      * @param userId   用户ID
      * @param username 用户名
      * @param roleId   角色ID
-     * @param role     角色标识 (admin/teacher)
+     * @param role     角色标识 (admin/teacher/dept_director)
+     * @param deptId   部门ID（可为null）
      * @return JWT Token 字符串
      */
-    public String generateToken(Long userId, String username, Long roleId, String role) {
+    public String generateToken(Long userId, String username, Long roleId, String role, Long deptId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
         claims.put("roleId", roleId);
         claims.put("role", role);
+        if (deptId != null) {
+            claims.put("deptId", deptId);
+        }
 
         return Jwts.builder()
                 .claims(claims)
@@ -55,7 +60,15 @@ public class JwtUtils {
     }
 
     /**
+     * 向后兼容：不传 deptId 的旧签名
+     */
+    public String generateToken(Long userId, String username, Long roleId, String role) {
+        return generateToken(userId, username, roleId, role, null);
+    }
+
+    /**
      * 解析 Token，获取 Claims
+     * 
      * @param token JWT Token
      * @return Claims（如果 Token 无效则抛出异常）
      */
@@ -86,6 +99,20 @@ public class JwtUtils {
      */
     public String getRole(String token) {
         return parseToken(token).get("role", String.class);
+    }
+
+    /**
+     * 从 Token 中获取部门ID
+     */
+    public Long getDeptId(String token) {
+        return parseToken(token).get("deptId", Long.class);
+    }
+
+    /**
+     * 从 Token 中获取角色ID
+     */
+    public Long getRoleId(String token) {
+        return parseToken(token).get("roleId", Long.class);
     }
 
     /**
