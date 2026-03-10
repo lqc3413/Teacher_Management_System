@@ -98,14 +98,12 @@ public class TeacherService {
                         || existing.getStatus() == Submission.STATUS_FINAL_REJECTED));
 
         // 3. 仅对非驳回重新提交的情况，校验任务状态和截止时间
-        if (!isRejectedResubmit) {
-            CollectionTask task = collectionTaskMapper.selectById(taskId);
-            if (task == null || task.getStatus() != 1) {
-                throw new RuntimeException("任务不存在或未开放填报");
-            }
-            if (LocalDateTime.now().isAfter(task.getEndTime())) {
-                throw new RuntimeException("任务已截止，无法提交");
-            }
+        CollectionTask task = collectionTaskMapper.selectById(taskId);
+        if (task == null || task.getStatus() != 1) {
+            throw new RuntimeException("任务不存在或未开放填报");
+        }
+        if (!isRejectedResubmit && LocalDateTime.now().isAfter(task.getEndTime())) {
+            throw new RuntimeException("任务已截止，无法提交");
         }
 
         // 4. 处理已有提交记录
@@ -411,7 +409,7 @@ public class TeacherService {
 
         QueryWrapper<PaperRecord> pq = new QueryWrapper<>();
         pq.eq("submission_id", submissionId);
-        vo.setPaper(paperRecordMapper.selectOne(pq));
+        vo.setPaperList(paperRecordMapper.selectList(pq));
 
         QueryWrapper<VerticalProject> vpq = new QueryWrapper<>();
         vpq.eq("submission_id", submissionId);
@@ -497,7 +495,7 @@ public class TeacherService {
 
         QueryWrapper<PaperRecord> pq = new QueryWrapper<>();
         pq.eq("submission_id", submissionId);
-        vo.setPaper(paperRecordMapper.selectOne(pq));
+        vo.setPaperList(paperRecordMapper.selectList(pq));
 
         QueryWrapper<VerticalProject> vpq = new QueryWrapper<>();
         vpq.eq("submission_id", submissionId);
@@ -533,7 +531,13 @@ public class TeacherService {
 
         for (Submission sub : subs) {
             int st = sub.getStatus() != null ? sub.getStatus() : 0;
-            statusIdMap.computeIfAbsent(st, k -> new ArrayList<>()).add(sub.getId());
+            int groupKey = st;
+            if (st == Submission.STATUS_DEPT_APPROVED) {
+                groupKey = Submission.STATUS_PENDING;
+            } else if (st == Submission.STATUS_FINAL_REJECTED) {
+                groupKey = Submission.STATUS_REJECTED;
+            }
+            statusIdMap.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(sub.getId());
         }
 
         group.setApproved(buildAchievementVO(statusIdMap.get(1)));
@@ -827,36 +831,26 @@ public class TeacherService {
     @Transactional
     public Long importExcel(Long userId, Long taskId, MultipartFile file) throws IOException {
         // 1. 分别读取 10 个 Sheet
-        List<IpExcelDTO> ipRows = EasyExcel.read(file.getInputStream())
-                .head(IpExcelDTO.class).sheet(0).doReadSync();
-        ipRows.removeIf(r -> isBlank(r.getName()));
-        List<CompetitionExcelDTO> compRows = EasyExcel.read(file.getInputStream())
-                .head(CompetitionExcelDTO.class).sheet(1).doReadSync();
-        compRows.removeIf(r -> isBlank(r.getName()));
-        List<TrainingExcelDTO> trainRows = EasyExcel.read(file.getInputStream())
-                .head(TrainingExcelDTO.class).sheet(2).doReadSync();
-        trainRows.removeIf(r -> isBlank(r.getName()));
-        List<ReportExcelDTO> reportRows = EasyExcel.read(file.getInputStream())
-                .head(ReportExcelDTO.class).sheet(3).doReadSync();
-        reportRows.removeIf(r -> isBlank(r.getName()));
-        List<BookExcelDTO> bookRows = EasyExcel.read(file.getInputStream())
-                .head(BookExcelDTO.class).sheet(4).doReadSync();
-        bookRows.removeIf(r -> isBlank(r.getName()));
-        List<AwardExcelDTO> awardRows = EasyExcel.read(file.getInputStream())
-                .head(AwardExcelDTO.class).sheet(5).doReadSync();
-        awardRows.removeIf(r -> isBlank(r.getName()));
-        List<PaperExcelDTO> paperRows = EasyExcel.read(file.getInputStream())
-                .head(PaperExcelDTO.class).sheet(6).doReadSync();
-        paperRows.removeIf(r -> isBlank(r.getPaperName()));
-        List<ResearchProjectExcelDTO> vpRows = EasyExcel.read(file.getInputStream())
-                .head(ResearchProjectExcelDTO.class).sheet(7).doReadSync();
-        vpRows.removeIf(r -> isBlank(r.getProjectName()));
-        List<ResearchProjectExcelDTO> hpRows = EasyExcel.read(file.getInputStream())
-                .head(ResearchProjectExcelDTO.class).sheet(8).doReadSync();
-        hpRows.removeIf(r -> isBlank(r.getProjectName()));
-        List<InnovationProjectExcelDTO> innovRows = EasyExcel.read(file.getInputStream())
-                .head(InnovationProjectExcelDTO.class).sheet(9).doReadSync();
-        innovRows.removeIf(r -> isBlank(r.getProjectName()));
+        List<IpExcelDTO> ipRows = readSheet(file, IpExcelDTO.class, 0);
+        ipRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "请填写完整名称"));
+        List<CompetitionExcelDTO> compRows = readSheet(file, CompetitionExcelDTO.class, 1);
+        compRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "填写竞赛全称"));
+        List<TrainingExcelDTO> trainRows = readSheet(file, TrainingExcelDTO.class, 2);
+        trainRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "填写培训项目全称"));
+        List<ReportExcelDTO> reportRows = readSheet(file, ReportExcelDTO.class, 3);
+        reportRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "填写报告完整名称"));
+        List<BookExcelDTO> bookRows = readSheet(file, BookExcelDTO.class, 4);
+        bookRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "填写著作完整名称"));
+        List<AwardExcelDTO> awardRows = readSheet(file, AwardExcelDTO.class, 5);
+        awardRows.removeIf(r -> isBlank(r.getName()) || isTemplateExample(r.getName(), "填写获奖成果完整名称"));
+        List<PaperExcelDTO> paperRows = readSheet(file, PaperExcelDTO.class, 6);
+        paperRows.removeIf(r -> isBlank(r.getPaperName()) || isTemplateExample(r.getPaperName(), "填写论文完整标题"));
+        List<ResearchProjectExcelDTO> vpRows = readSheet(file, ResearchProjectExcelDTO.class, 7);
+        vpRows.removeIf(r -> isBlank(r.getProjectName()) || isTemplateExample(r.getProjectName(), "仅填本时间段立项或结项的项目"));
+        List<ResearchProjectExcelDTO> hpRows = readSheet(file, ResearchProjectExcelDTO.class, 8);
+        hpRows.removeIf(r -> isBlank(r.getProjectName()) || isTemplateExample(r.getProjectName(), "仅填本时间段立项或结项的项目"));
+        List<InnovationProjectExcelDTO> innovRows = readSheet(file, InnovationProjectExcelDTO.class, 9);
+        innovRows.removeIf(r -> isBlank(r.getProjectName()) || isTemplateExample(r.getProjectName(), "填写项目完整名称"));
 
         // 2. 组装 TeacherSubmitDTO
         TeacherSubmitDTO dto = new TeacherSubmitDTO();
@@ -869,8 +863,8 @@ public class TeacherService {
                 IpDTO ip = new IpDTO();
                 ip.setName(row.getName());
                 ip.setType(row.getType());
-                ip.setDate(row.getDate());
-                ip.setRank(row.getRank());
+                ip.setDate(normalizeExcelDate(row.getDate()));
+                ip.setRank(safeParseInt(row.getRank(), 1));
                 ip.setOtherParticipants(splitStr(row.getOtherParticipantsStr()));
                 ipList.add(ip);
             }
@@ -884,7 +878,7 @@ public class TeacherService {
             c.setCategory(row.getCategory());
             c.setName(row.getName());
             c.setOrganizer(row.getOrganizer());
-            c.setAwardDate(row.getAwardDate());
+            c.setAwardDate(normalizeExcelDate(row.getAwardDate()));
             c.setCertNo(row.getCertNo());
             c.setCertName(row.getCertName());
             c.setAwardLevel(row.getAwardLevel());
@@ -901,10 +895,10 @@ public class TeacherService {
             t.setType(row.getType());
             t.setName(row.getName());
             t.setForm(row.getForm());
-            t.setHours(row.getHours());
+            t.setHours(safeParseInt(row.getHours(), 0));
             t.setOrganizer(row.getOrganizer());
-            t.setStartDate(row.getStartDate());
-            t.setEndDate(row.getEndDate());
+            t.setStartDate(normalizeExcelDate(row.getStartDate()));
+            t.setEndDate(normalizeExcelDate(row.getEndDate()));
             dto.setTraining(t);
         }
 
@@ -914,8 +908,8 @@ public class TeacherService {
             ReportDTO r = new ReportDTO();
             r.setName(row.getName());
             r.setLevel(row.getLevel());
-            r.setDate(row.getDate());
-            r.setRank(row.getRank());
+            r.setDate(normalizeExcelDate(row.getDate()));
+            r.setRank(safeParseInt(row.getRank(), 1));
             r.setOthers(splitStr(row.getOthersStr()));
             dto.setReport(r);
         }
@@ -926,10 +920,10 @@ public class TeacherService {
             BookDTO b = new BookDTO();
             b.setName(row.getName());
             b.setPublisher(row.getPublisher());
-            b.setDate(row.getDate());
+            b.setDate(normalizeExcelDate(row.getDate()));
             b.setLevel(row.getLevel());
-            b.setRank(row.getRank());
-            b.setSelectionDate(row.getSelectionDate());
+            b.setRank(safeParseInt(row.getRank(), 1));
+            b.setSelectionDate(normalizeExcelDate(row.getSelectionDate()));
             dto.setBook(b);
         }
 
@@ -941,9 +935,9 @@ public class TeacherService {
             a.setType(row.getType());
             a.setLevel(row.getLevel());
             a.setGrade(row.getGrade());
-            a.setRank(row.getRank());
-            a.setOrgRank(row.getOrgRank());
-            a.setDate(row.getDate());
+            a.setRank(safeParseInt(row.getRank(), 1));
+            a.setOrgRank(safeParseInt(row.getOrgRank(), 1));
+            a.setDate(normalizeExcelDate(row.getDate()));
             a.setCertNo(row.getCertNo());
             dto.setAward(a);
         }
@@ -959,7 +953,7 @@ public class TeacherService {
                 p.setOtherAuthors(splitStr(row.getOtherAuthorsStr()));
                 p.setJournalName(row.getJournalName());
                 p.setIndexCategory(row.getIndexCategory());
-                p.setPublishDate(row.getPublishDate());
+                p.setPublishDate(normalizeExcelDate(row.getPublishDate()));
                 paperList.add(p);
             }
             dto.setPaperList(paperList);
@@ -982,7 +976,7 @@ public class TeacherService {
             ip.setStatus(row.getStatus());
             ip.setLevel(row.getLevel());
             ip.setProjectName(row.getProjectName());
-            ip.setStartDate(row.getStartDate());
+            ip.setStartDate(normalizeExcelDate(row.getStartDate()));
             ip.setCompletion(row.getCompletion());
             ip.setLeaderStudent(row.getLeaderStudent());
             ip.setOtherStudents(splitStr(row.getOtherStudentsStr()));
@@ -993,6 +987,10 @@ public class TeacherService {
         }
 
         // 3. 复用 submitInfo 落库
+        if (!hasImportedContent(dto)) {
+            throw new RuntimeException("未识别到有效导入数据，请确认已覆盖模板示例行或从示例行下一行开始填写");
+        }
+
         return submitInfo(userId, dto);
     }
 
@@ -1000,6 +998,75 @@ public class TeacherService {
     /** 判断字符串是否为空（用于过滤模板空白行） */
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    private boolean isTemplateExample(String value, String example) {
+        return !isBlank(value) && value.trim().equals(example);
+    }
+
+    private <T> List<T> readSheet(MultipartFile file, Class<T> headClass, int sheetNo) throws IOException {
+        return EasyExcel.read(file.getInputStream())
+                .head(headClass)
+                .sheet(sheetNo)
+                .headRowNumber(1)
+                .doReadSync();
+    }
+
+    private Integer safeParseInt(String value, int defaultValue) {
+        if (isBlank(value)) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim().replaceAll("[^0-9]", ""));
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
+    }
+
+    private String normalizeExcelDate(String value) {
+        if (isBlank(value)) {
+            return value;
+        }
+        String normalized = value.trim();
+        if (normalized.contains(" ")) {
+            normalized = normalized.substring(0, normalized.indexOf(' '));
+        }
+        normalized = normalized.replace("/", "-").replace(".", "-");
+
+        String[] parts = normalized.split("-");
+        if (parts.length == 3) {
+            try {
+                int year = Integer.parseInt(parts[0]);
+                int month = Integer.parseInt(parts[1]);
+                int day = Integer.parseInt(parts[2]);
+                return String.format("%04d-%02d-%02d", year, month, day);
+            } catch (NumberFormatException ignored) {
+                return normalized.length() > 10 ? normalized.substring(0, 10) : normalized;
+            }
+        }
+        if (parts.length == 2) {
+            try {
+                int year = Integer.parseInt(parts[0]);
+                int month = Integer.parseInt(parts[1]);
+                return String.format("%04d-%02d", year, month);
+            } catch (NumberFormatException ignored) {
+                return normalized.length() > 7 ? normalized.substring(0, 7) : normalized;
+            }
+        }
+        return normalized.length() > 10 ? normalized.substring(0, 10) : normalized;
+    }
+
+    private boolean hasImportedContent(TeacherSubmitDTO dto) {
+        return (dto.getIpList() != null && !dto.getIpList().isEmpty())
+                || dto.getCompetition() != null
+                || dto.getTraining() != null
+                || dto.getReport() != null
+                || dto.getBook() != null
+                || dto.getAward() != null
+                || (dto.getPaperList() != null && !dto.getPaperList().isEmpty())
+                || dto.getVerticalProject() != null
+                || dto.getHorizontalProject() != null
+                || dto.getInnovationProject() != null;
     }
 
     private List<String> splitStr(String str) {
@@ -1016,10 +1083,10 @@ public class TeacherService {
         rp.setFundSource(row.getFundSource());
         rp.setLevel(row.getLevel());
         rp.setTeamMembers(splitStr(row.getTeamMembersStr()));
-        rp.setSetupDate(row.getSetupDate());
+        rp.setSetupDate(normalizeExcelDate(row.getSetupDate()));
         rp.setSetupNo(row.getSetupNo());
         rp.setUpdateStatus(row.getUpdateStatus());
-        rp.setAcceptDate(row.getAcceptDate());
+        rp.setAcceptDate(normalizeExcelDate(row.getAcceptDate()));
         rp.setFunds(row.getFunds());
         return rp;
     }

@@ -342,7 +342,7 @@ async function openDetail(row) {
 const recordLabels = {
   ipList: '知识产权', competition: '指导竞赛', training: '培训进修',
   report: '咨询报告', book: '自编教材', award: '成果获奖',
-  paper: '论文发表', verticalProject: '纵向项目',
+  paperList: '论文发表', verticalProject: '纵向项目',
   horizontalProject: '横向项目', innovationProject: '创新创业项目'
 }
 
@@ -381,7 +381,7 @@ const columnConfig = {
     {prop: 'grade', label: '获奖等级'}, {prop: 'awardDate', label: '获奖时间'},
     {prop: 'rank', label: '本人排名'}, {prop: 'orgRank', label: '所在单位排名'}
   ],
-  paper: [
+  paperList: [
     {prop: 'paperType', label: '论文类型'}, {prop: 'paperName', label: '论文名称'},
     {prop: 'authorType', label: '作者类型'}, {prop: 'otherAuthors', label: '其他作者'},
     {prop: 'journalName', label: '发表期刊'}, {prop: 'indexCategory', label: '收录类别'},

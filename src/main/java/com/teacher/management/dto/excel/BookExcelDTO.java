@@ -26,7 +26,7 @@ public class BookExcelDTO {
 
     @ExcelProperty("本人排名")
     @ColumnWidth(14)
-    private Integer rank;
+    private String rank;
 
     @ExcelProperty("入选日期")
     @ColumnWidth(16)
@@ -64,11 +64,11 @@ public class BookExcelDTO {
         this.level = level;
     }
 
-    public Integer getRank() {
+    public String getRank() {
         return rank;
     }
 
-    public void setRank(Integer rank) {
+    public void setRank(String rank) {
         this.rank = rank;
     }
 

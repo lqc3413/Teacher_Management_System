@@ -47,6 +47,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String username = claims.getSubject();
                     String role = claims.get("role", String.class);
 
+                    // 【B01/B03 防御】role 为空时直接跳过认证
+                    if (role == null || role.isBlank()) {
+                        SecurityContextHolder.clearContext();
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
                     // 创建权限列表
                     List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));

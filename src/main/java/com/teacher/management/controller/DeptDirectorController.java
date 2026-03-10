@@ -203,6 +203,11 @@ public class DeptDirectorController {
             return Result.error("只能审核本部门教师的提交");
         }
 
+        // 【B06 修复】入参校验 approved 非空
+        if (request.getApproved() == null) {
+            return Result.error("审核结果(approved)不能为空");
+        }
+
         // 执行初审
         sub.setDeptAuditStatus(request.getApproved() ? 1 : 2);
         sub.setDeptAuditorId(director.getId());

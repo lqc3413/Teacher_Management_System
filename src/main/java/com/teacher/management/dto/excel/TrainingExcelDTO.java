@@ -22,7 +22,7 @@ public class TrainingExcelDTO {
 
     @ExcelProperty("培训学时")
     @ColumnWidth(12)
-    private Integer hours;
+    private String hours;
 
     @ExcelProperty("组织单位")
     @ColumnWidth(24)
@@ -60,11 +60,11 @@ public class TrainingExcelDTO {
         this.form = form;
     }
 
-    public Integer getHours() {
+    public String getHours() {
         return hours;
     }
 
-    public void setHours(Integer hours) {
+    public void setHours(String hours) {
         this.hours = hours;
     }
 

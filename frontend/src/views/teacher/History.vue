@@ -148,16 +148,19 @@
             <el-descriptions-item label="起止时间">{{ detailData.training.startDate || '—' }} 至 {{ detailData.training.endDate || '—' }}</el-descriptions-item>
           </el-descriptions>
 
-          <!-- 论文 -->
-          <el-descriptions v-if="detailData.paper" title="发表论文" :column="isMobile ? 1 : 2" border size="small" class="detail-section">
-            <el-descriptions-item label="论文类型">{{ detailData.paper.paperType || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="论文名称">{{ detailData.paper.paperName || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="作者类型">{{ detailData.paper.authorType || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="其他作者">{{ detailData.paper.otherAuthors || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="发表期刊">{{ detailData.paper.journalName || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="收录类别">{{ detailData.paper.indexCategory || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="发表日期">{{ detailData.paper.publishDate || '—' }}</el-descriptions-item>
-          </el-descriptions>
+          <!-- 论文（【B04 修复】支持展示多条论文） -->
+          <template v-if="detailData.paperList && detailData.paperList.length">
+            <el-descriptions v-for="(p, pIdx) in detailData.paperList" :key="'paper-' + pIdx"
+              :title="'发表论文' + (detailData.paperList.length > 1 ? ` (${pIdx+1})` : '')" :column="isMobile ? 1 : 2" border size="small" class="detail-section">
+              <el-descriptions-item label="论文类型">{{ p.paperType || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="论文名称">{{ p.paperName || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="作者类型">{{ p.authorType || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="其他作者">{{ p.otherAuthors || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="发表期刊">{{ p.journalName || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="收录类别">{{ p.indexCategory || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="发表日期">{{ p.publishDate || '—' }}</el-descriptions-item>
+            </el-descriptions>
+          </template>
 
           <!-- 奖项 -->
           <el-descriptions v-if="detailData.award" title="教学科研成果奖" :column="isMobile ? 1 : 2" border size="small" class="detail-section">
@@ -233,7 +236,7 @@
           </el-descriptions>
 
           <!-- 无任何子表数据 -->
-          <el-empty v-if="(!detailData.ipList || !detailData.ipList.length) && !detailData.competition && !detailData.training && !detailData.paper && !detailData.award && !detailData.book && !detailData.report && !detailData.verticalProject && !detailData.horizontalProject && !detailData.innovationProject" description="该次提交暂无详情数据" />
+          <el-empty v-if="(!detailData.ipList || !detailData.ipList.length) && !detailData.competition && !detailData.training && (!detailData.paperList || !detailData.paperList.length) && !detailData.award && !detailData.book && !detailData.report && !detailData.verticalProject && !detailData.horizontalProject && !detailData.innovationProject" description="该次提交暂无详情数据" />
         </template>
       </div>
     </el-dialog>

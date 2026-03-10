@@ -239,7 +239,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, School, Timer, Iphone, Message } from '@element-plus/icons-vue'
-import { getUserInfo, updateProfile, updatePassword } from '../../api/user'
+import { getCurrentUserInfo, updateProfile, updatePassword } from '../../api/user'
 import { getBasicInfo, updateBasicInfo } from '../../api/teacher'
 import { getAllDepts } from '../../api/admin'
 import dayjs from 'dayjs'
@@ -313,8 +313,8 @@ const initData = async () => {
     if (!userInfoStr) return
     const localUser = JSON.parse(userInfoStr)
     
-    // 获取最新用户信息
-    const res = await getUserInfo(localUser.id)
+    // 获取最新用户信息（通过 /api/users/me，无需传 id）
+    const res = await getCurrentUserInfo()
     const user = res.data
     
     Object.assign(infoForm, {

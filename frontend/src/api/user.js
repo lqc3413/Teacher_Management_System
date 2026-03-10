@@ -24,6 +24,16 @@ export function getUserInfo(id) {
 }
 
 /**
+ * 获取当前登录用户自己的信息（所有角色可用）
+ */
+export function getCurrentUserInfo() {
+    return request({
+        url: '/users/me',
+        method: 'get'
+    })
+}
+
+/**
  * 教师注册
  * @param {Object} data - { username, password, confirmPassword, realName, employeeNo }
  */

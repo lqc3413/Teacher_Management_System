@@ -276,9 +276,9 @@ public class AdminController {
                 new QueryWrapper<User>().eq("role_id", 2));
         data.put("teacherCount", teacherCount);
 
-        // 2. 待审核提交数量 (status = 0)
+        // 2. 待审核提交数量 (【B07 修复】统计 status=0 和 status=3)
         long pendingCount = submissionMapper.selectCount(
-                new QueryWrapper<Submission>().eq("status", 0));
+                new QueryWrapper<Submission>().in("status", java.util.Arrays.asList(0, 3)));
         data.put("pendingCount", pendingCount);
 
         // 3. 累计成果数

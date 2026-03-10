@@ -39,7 +39,7 @@ public class UserController {
     public Result<?> login(@RequestBody Map<String, String> loginForm) {
         String username = loginForm.get("username");
         String password = loginForm.get("password");
-        String role = loginForm.get("role"); // teacher / admin
+        String frontendRole = loginForm.get("role"); // 仅用于前端 Tab 校验，不作为 JWT 签发依据
 
         if (username == null || password == null) {
             return Result.error("账号和密码不能为空");
@@ -66,23 +66,24 @@ public class UserController {
             return Result.error("账号或密码错误");
         }
 
-        // 校验角色是否匹配（admin=1, teacher=2, dept_director=3）
-        if (role != null) {
-            Long userRoleId = user.getRoleId();
-            if ("admin".equals(role)) {
-                // 管理员Tab：只允许 roleId=1
-                if (!userRoleId.equals(1L)) {
-                    return Result.error("该账号不是管理员角色，请切换登录方式");
-                }
-            } else if ("teacher".equals(role)) {
-                // 教师Tab：允许 roleId=2（教师）和 roleId=3（部门主任）
-                if (!userRoleId.equals(2L) && !userRoleId.equals(3L)) {
-                    return Result.error("该账号不是教师角色，请切换登录方式");
-                }
-                // 如果是部门主任(roleId=3)，将 role 修正为 dept_director
-                if (userRoleId.equals(3L)) {
-                    role = "dept_director";
-                }
+        // 【B01 修复】根据后端 roleId 确定真实角色，不信任前端传入的 role
+        Long userRoleId = user.getRoleId();
+        String role;
+        if (userRoleId != null && userRoleId.equals(1L)) {
+            role = "admin";
+        } else if (userRoleId != null && userRoleId.equals(3L)) {
+            role = "dept_director";
+        } else {
+            role = "teacher";
+        }
+
+        // 如果前端传了角色（用于界面 Tab 区分），校验其与后端角色是否一致
+        if (frontendRole != null) {
+            if ("admin".equalsIgnoreCase(frontendRole) && !userRoleId.equals(1L)) {
+                return Result.error("该账号不是管理员角色，请切换登录方式");
+            }
+            if ("teacher".equalsIgnoreCase(frontendRole) && !userRoleId.equals(2L) && !userRoleId.equals(3L)) {
+                return Result.error("该账号不是教师角色，请切换登录方式");
             }
         }
 
@@ -95,7 +96,7 @@ public class UserController {
         user.setLastLogin(LocalDateTime.now());
         userService.updateById(user);
 
-        // 生成 JWT Token
+        // 生成 JWT Token（角色由后端 roleId 映射，安全可控）
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRoleId(), role,
                 user.getDeptId());
 
@@ -128,7 +129,21 @@ public class UserController {
         return Result.success(result);
     }
 
-    /** 根据ID查询 */
+    /** 【N01 配套】获取当前登录用户自己的信息（所有角色可用） */
+    @GetMapping("/me")
+    public Result<?> getCurrentUser() {
+        Long userId = com.teacher.management.utils.SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.error("未登录");
+        }
+        User user = userService.getById(userId);
+        if (user != null) {
+            user.setPassword(null);
+        }
+        return Result.success(user);
+    }
+
+    /** 根据ID查询（仅管理员） */
     @GetMapping("/{id}")
     public Result<?> getById(@PathVariable Long id) {
         User user = userService.getById(id);

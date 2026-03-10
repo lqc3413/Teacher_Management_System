@@ -29,7 +29,7 @@ public class SubmissionDetailVO {
     private ReportRecord report;
     private TextbookRecord book;
     private AwardRecord award;
-    private PaperRecord paper;
+    private List<PaperRecord> paperList;
     private VerticalProject verticalProject;
     private HorizontalProject horizontalProject;
     private InnovationProject innovationProject;
@@ -82,8 +82,12 @@ public class SubmissionDetailVO {
     public AwardRecord getAward() { return award; }
     public void setAward(AwardRecord award) { this.award = award; }
 
-    public PaperRecord getPaper() { return paper; }
-    public void setPaper(PaperRecord paper) { this.paper = paper; }
+    public List<PaperRecord> getPaperList() { return paperList; }
+    public void setPaperList(List<PaperRecord> paperList) { this.paperList = paperList; }
+    /** 向后兼容：返回第一条论文（如有），JSON 序列化时自动输出 paper 字段 */
+    public PaperRecord getPaper() {
+        return (paperList != null && !paperList.isEmpty()) ? paperList.get(0) : null;
+    }
 
     public VerticalProject getVerticalProject() { return verticalProject; }
     public void setVerticalProject(VerticalProject verticalProject) { this.verticalProject = verticalProject; }

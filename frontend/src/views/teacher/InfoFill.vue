@@ -946,9 +946,9 @@ const handleDownloadTemplate = async () => {
 
 // Excel 上传导入
 const handleExcelUpload = async (file) => {
-  const taskId = route.query.taskId ? Number(route.query.taskId) : null
+  const taskId = route.query.taskId ? Number(route.query.taskId) : currentTaskId.value
   if (!taskId) {
-    ElMessage.warning('请先从采集任务入口进入填报页面')
+    ElMessage.warning('当前没有进行中的采集任务，无法导入')
     return
   }
 
@@ -1145,7 +1145,7 @@ const handleSubmit = async () => {
     // 构造 payload — taskId 必填
     const resolvedTaskId = route.query.taskId ? Number(route.query.taskId) : currentTaskId.value
     if (!resolvedTaskId && !isResubmit.value) {
-      ElMessage.warning('请先从采集任务入口进入填报页面')
+      ElMessage.warning('当前没有进行中的采集任务，无法提交')
       return
     }
     const payload = {
@@ -1417,10 +1417,11 @@ onMounted(async () => {
       formData.award.certNo = a.certNo || ''
     }
 
-    // 回填论文
-    if (d.paper) {
+    // 回填论文（【B04 修复】兼容 paperList 和旧的 paper 字段）
+    const paperData = (d.paperList && d.paperList.length) ? d.paperList[0] : d.paper
+    if (paperData) {
       hasPaper.value = true
-      const p = d.paper
+      const p = paperData
       formData.paper.paperType = p.paperType || ''
       formData.paper.paperName = p.paperName || ''
       formData.paper.authorType = p.authorType || ''

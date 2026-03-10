@@ -26,11 +26,11 @@ public class AwardExcelDTO {
 
     @ExcelProperty("本人排名")
     @ColumnWidth(14)
-    private Integer rank;
+    private String rank;
 
     @ExcelProperty("集体排名")
     @ColumnWidth(14)
-    private Integer orgRank;
+    private String orgRank;
 
     @ExcelProperty("获奖日期")
     @ColumnWidth(18)
@@ -72,19 +72,19 @@ public class AwardExcelDTO {
         this.grade = grade;
     }
 
-    public Integer getRank() {
+    public String getRank() {
         return rank;
     }
 
-    public void setRank(Integer rank) {
+    public void setRank(String rank) {
         this.rank = rank;
     }
 
-    public Integer getOrgRank() {
+    public String getOrgRank() {
         return orgRank;
     }
 
-    public void setOrgRank(Integer orgRank) {
+    public void setOrgRank(String orgRank) {
         this.orgRank = orgRank;
     }
 

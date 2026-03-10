@@ -22,7 +22,7 @@ public class ReportExcelDTO {
 
     @ExcelProperty("本人排名")
     @ColumnWidth(14)
-    private Integer rank;
+    private String rank;
 
     @ExcelProperty("其他参与人")
     @ColumnWidth(32)
@@ -52,11 +52,11 @@ public class ReportExcelDTO {
         this.date = date;
     }
 
-    public Integer getRank() {
+    public String getRank() {
         return rank;
     }
 
-    public void setRank(Integer rank) {
+    public void setRank(String rank) {
         this.rank = rank;
     }
 
