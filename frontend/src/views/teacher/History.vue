@@ -39,9 +39,12 @@
               <el-button link type="primary" size="small" @click="exportExcel(scope.row)">
                 导出Excel
               </el-button>
-              <el-button v-if="scope.row.status === 2" link type="warning" size="small" @click="handleResubmit(scope.row)">
+              <el-button v-if="canResubmit(scope.row)" link type="warning" size="small" @click="handleResubmit(scope.row)">
                 重新修改
               </el-button>
+              <el-text v-else-if="showTaskClosed(scope.row)" type="info" size="small">
+                任务已截止
+              </el-text>
             </div>
           </template>
         </el-table-column>
@@ -89,9 +92,12 @@
           <el-button link type="success" size="small" @click="exportExcel(item)">
             导出Excel
           </el-button>
-          <el-button v-if="item.status === 2" link type="danger" size="small" @click="handleResubmit(item)">
+          <el-button v-if="canResubmit(item)" link type="danger" size="small" @click="handleResubmit(item)">
             重新修改
           </el-button>
+          <el-text v-else-if="showTaskClosed(item)" type="info" size="small">
+            任务已截止
+          </el-text>
         </div>
       </el-card>
       
@@ -275,6 +281,9 @@ const getStatusType = (status) => {
     default: return 'info'
   }
 }
+const isRejectedStatus = (status) => status === 2 || status === 4
+const canResubmit = (row) => isRejectedStatus(row?.status) && row?.canResubmit === true
+const showTaskClosed = (row) => isRejectedStatus(row?.status) && row?.taskClosed === true
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -329,6 +338,10 @@ const viewDetail = async (row) => {
 }
 
 const handleResubmit = (row) => {
+  if (!canResubmit(row)) {
+    ElMessage.warning('当前任务已截止，无法重新提交')
+    return
+  }
   router.push({ path: '/teacher/info-fill', query: { resubmitId: row.id, taskId: row.taskId } })
 }
 

@@ -97,13 +97,20 @@ public class TeacherService {
                 && (existing.getStatus() == Submission.STATUS_REJECTED
                         || existing.getStatus() == Submission.STATUS_FINAL_REJECTED));
 
-        // 3. 仅对非驳回重新提交的情况，校验任务状态和截止时间
+        // 3. 统一校验任务状态和截止时间，任务截止后不再允许重新提交
         CollectionTask task = collectionTaskMapper.selectById(taskId);
-        if (task == null || task.getStatus() != 1) {
+        if (task == null) {
             throw new RuntimeException("任务不存在或未开放填报");
         }
-        if (!isRejectedResubmit && LocalDateTime.now().isAfter(task.getEndTime())) {
+        LocalDateTime now = LocalDateTime.now();
+        if (task.getStartTime() != null && now.isBefore(task.getStartTime())) {
+            throw new RuntimeException("任务尚未开始，无法提交");
+        }
+        if (task.getEndTime() != null && now.isAfter(task.getEndTime())) {
             throw new RuntimeException("任务已截止，无法提交");
+        }
+        if (!isRejectedResubmit && task.getStatus() != 1) {
+            throw new RuntimeException("任务不存在或未开放填报");
         }
 
         // 4. 处理已有提交记录

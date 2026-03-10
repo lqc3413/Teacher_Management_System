@@ -66,10 +66,11 @@ export function getAchievements() {
  *   hasSubmitted: boolean          // [过渡字段] 等价于 submissionExists，后续移除
  * }}>}
  */
-export function getCurrentTask() {
+export function getCurrentTask(params) {
     return request({
         url: '/teacher/task/current',
-        method: 'get'
+        method: 'get',
+        params
     })
 }
 

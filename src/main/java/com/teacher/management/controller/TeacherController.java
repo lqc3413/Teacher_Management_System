@@ -79,6 +79,16 @@ public class TeacherController {
 
         return latest;
     }
+    private boolean isRejectedStatus(Integer status) {
+        return Objects.equals(status, Submission.STATUS_REJECTED)
+                || Objects.equals(status, Submission.STATUS_FINAL_REJECTED);
+    }
+
+    private boolean isWithinTaskWindow(CollectionTask task, LocalDateTime now) {
+        return task != null
+                && (task.getStartTime() == null || !now.isBefore(task.getStartTime()))
+                && (task.getEndTime() == null || !now.isAfter(task.getEndTime()));
+    }
 
     @PostMapping("/submit")
     public Result<?> submit(@RequestBody TeacherSubmitDTO dto) {
@@ -116,7 +126,7 @@ public class TeacherController {
 
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
+            return Result.error("用户不存在");
         }
 
         QueryWrapper<Submission> sq = new QueryWrapper<>();
@@ -133,14 +143,15 @@ public class TeacherController {
                 .map(Submission::getTaskId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<Long, String> taskMap = new HashMap<>();
+        Map<Long, CollectionTask> taskMap = new HashMap<>();
         if (!taskIds.isEmpty()) {
             List<CollectionTask> tasks = collectionTaskMapper.selectBatchIds(taskIds);
-            for (CollectionTask t : tasks) {
-                taskMap.put(t.getId(), t.getTaskName());
+            for (CollectionTask task : tasks) {
+                taskMap.put(task.getId(), task);
             }
         }
 
+        LocalDateTime now = LocalDateTime.now();
         List<Map<String, Object>> records = new ArrayList<>();
         for (Submission sub : result.getRecords()) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -152,11 +163,23 @@ public class TeacherController {
             item.put("auditRemark", sub.getAuditRemark());
             item.put("createTime", sub.getCreateTime());
 
-            if (sub.getTaskId() != null) {
-                item.put("taskName", taskMap.getOrDefault(sub.getTaskId(), "\u672a\u77e5\u4efb\u52a1"));
+            CollectionTask task = sub.getTaskId() != null ? taskMap.get(sub.getTaskId()) : null;
+            if (task != null) {
+                item.put("taskName", task.getTaskName());
+                item.put("taskEndTime", task.getEndTime());
+            } else if (sub.getTaskId() != null) {
+                item.put("taskName", "未知任务");
             } else {
-                item.put("taskName", "\u5386\u53f2\u63d0\u4ea4");
+                item.put("taskName", "历史提交");
             }
+
+            boolean canResubmit = isRejectedStatus(sub.getStatus()) && isWithinTaskWindow(task, now);
+            boolean taskClosed = isRejectedStatus(sub.getStatus())
+                    && task != null
+                    && task.getEndTime() != null
+                    && now.isAfter(task.getEndTime());
+            item.put("canResubmit", canResubmit);
+            item.put("taskClosed", taskClosed);
             records.add(item);
         }
 
@@ -166,7 +189,6 @@ public class TeacherController {
 
         return Result.success(data);
     }
-
     @GetMapping("/detail/{id}")
     public Result<?> detail(@PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId();
@@ -182,12 +204,19 @@ public class TeacherController {
     }
 
     @GetMapping("/task/current")
-    public Result<?> currentTask() {
-        QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
-        tq.eq("status", 1)
-                .le("start_time", LocalDateTime.now())
-                .ge("end_time", LocalDateTime.now());
-        CollectionTask task = collectionTaskMapper.selectOne(tq);
+    public Result<?> currentTask(@RequestParam(required = false) Long taskId) {
+        LocalDateTime now = LocalDateTime.now();
+
+        CollectionTask task;
+        if (taskId != null) {
+            task = collectionTaskMapper.selectById(taskId);
+        } else {
+            QueryWrapper<CollectionTask> tq = new QueryWrapper<>();
+            tq.eq("status", 1)
+                    .le("start_time", now)
+                    .ge("end_time", now);
+            task = collectionTaskMapper.selectOne(tq);
+        }
 
         if (task == null) {
             return Result.success(null);
@@ -205,7 +234,7 @@ public class TeacherController {
             if (latest != null) {
                 submissionExists = true;
                 submissionStatus = latest.getStatus();
-                canResubmit = (submissionStatus == 2 || submissionStatus == 4);
+                canResubmit = isRejectedStatus(submissionStatus) && isWithinTaskWindow(task, now);
                 if (canResubmit) {
                     resubmitSubmissionId = latest.getId();
                 }

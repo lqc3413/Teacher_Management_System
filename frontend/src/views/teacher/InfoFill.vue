@@ -1098,7 +1098,11 @@ const formData = reactive({
 // 日期格式化辅助
 const fmt = (val, pattern = 'YYYY-MM-DD') => {
   if (!val) return ''
-  return dayjs(val).format(pattern)
+  const parsed = dayjs(val)
+  if (parsed.isValid()) {
+    return parsed.format(pattern)
+  }
+  return typeof val === 'string' ? val.trim() : ''
 }
 
 // 预置竞赛选项
@@ -1275,27 +1279,58 @@ const handleReset = () => {
   hasInnovationProject.value = false
 }
 
+const loadCurrentTaskContext = async (taskId = null) => {
+  const taskRes = await getCurrentTask(taskId ? { taskId } : undefined)
+  const taskData = taskRes.data || null
+
+  if (taskData?.task) {
+    currentTaskId.value = taskData.task.id
+    currentTaskName.value = taskData.task.taskName || ''
+  }
+
+  return taskData
+}
+
+const redirectExpiredResubmit = () => {
+  ElMessage.warning('当前任务已截止，无法重新提交')
+  router.replace('/teacher/history')
+}
+
 /**
  * 重新修改：从 Detail API 加载被退回的提交数据并回填表单
  */
 onMounted(async () => {
-  const resubmitId = route.query.resubmitId
-  const queryTaskId = route.query.taskId
+  const resubmitId = route.query.resubmitId ? Number(route.query.resubmitId) : null
+  const queryTaskId = route.query.taskId ? Number(route.query.taskId) : null
+  let currentTaskData = null
 
-  // 1. 如果 URL 携带了 taskId，直接使用
   if (queryTaskId) {
-    currentTaskId.value = Number(queryTaskId)
+    currentTaskId.value = queryTaskId
   }
 
-  // 2. 如果不是重新提交且没有 taskId，自动获取当前活跃任务
-  if (!resubmitId && !queryTaskId) {
+  if (resubmitId) {
     try {
-      const taskRes = await getCurrentTask()
-      if (taskRes.data && taskRes.data.task) {
-        currentTaskId.value = taskRes.data.task.id
-        currentTaskName.value = taskRes.data.task.taskName || ''
-        // 检查是否已提交
-        if (taskRes.data.hasSubmitted) {
+      currentTaskData = await loadCurrentTaskContext(queryTaskId)
+    } catch (e) {
+      console.error('获取当前任务失败', e)
+      redirectExpiredResubmit()
+      return
+    }
+
+    const activeTaskId = currentTaskData?.task?.id || null
+    const taskMatches = !queryTaskId || activeTaskId === queryTaskId
+    if (!activeTaskId || !taskMatches || currentTaskData?.canResubmit !== true) {
+      redirectExpiredResubmit()
+      return
+    }
+
+    alreadySubmitted.value = false
+    noActiveTask.value = false
+  } else if (!queryTaskId) {
+    try {
+      currentTaskData = await loadCurrentTaskContext(queryTaskId)
+      if (currentTaskData?.task) {
+        if (currentTaskData.hasSubmitted) {
           alreadySubmitted.value = true
           return
         }
@@ -1308,25 +1343,20 @@ onMounted(async () => {
       noActiveTask.value = true
       return
     }
-  }
-
-  // 3. 如果有 taskId（来自 URL），查询任务名称和提交状态
-  if (queryTaskId && !currentTaskName.value) {
+  } else if (!currentTaskName.value) {
     try {
-      const taskRes = await getCurrentTask()
-      if (taskRes.data && taskRes.data.task && taskRes.data.task.id === Number(queryTaskId)) {
-        currentTaskName.value = taskRes.data.task.taskName || ''
-        if (taskRes.data.hasSubmitted) {
+      currentTaskData = await loadCurrentTaskContext(queryTaskId)
+      if (currentTaskData?.task && currentTaskData.task.id === queryTaskId) {
+        if (currentTaskData.hasSubmitted) {
           alreadySubmitted.value = true
           return
         }
       }
     } catch (e) {
-      // 非关键，忽略
+      // 非关键错误，忽略
     }
   }
 
-  // 4. 处理重新提交
   if (!resubmitId) return
 
   try {
@@ -1335,6 +1365,7 @@ onMounted(async () => {
     if (!d) return
 
     isResubmit.value = true
+    alreadySubmitted.value = false
     resubmitMonth.value = d.submitMonth || ''
     resubmitRemark.value = d.auditRemark || ''
 
