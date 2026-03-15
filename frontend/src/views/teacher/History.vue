@@ -121,14 +121,28 @@
       :fullscreen="isMobile"
       destroy-on-close
     >
-      <div v-loading="detailLoading">
+      <div class="detail-content-wrapper" v-loading="detailLoading">
         <template v-if="detailData">
           <!-- 知识产权 -->
-          <el-descriptions v-if="detailData.ipList && detailData.ipList.length" title="知识产权" :column="1" border size="small" class="detail-section">
-            <el-descriptions-item v-for="(ip, idx) in detailData.ipList" :key="idx" :label="'#' + (idx+1)">
-              {{ ip.name || '—' }}（{{ ip.type || '—' }}）— 排名第{{ ip.rank }}，获取日期 {{ ip.obtainDate || '—' }}，其他参与人员：{{ ip.otherParticipants || '—' }}
-            </el-descriptions-item>
-          </el-descriptions>
+          <template v-if="detailData.ipList && detailData.ipList.length">
+            <el-descriptions
+              v-for="(ip, idx) in detailData.ipList"
+              :key="'ip-' + idx"
+              :title="'知识产权' + (detailData.ipList.length > 1 ? ` (${idx + 1})` : '')"
+              :column="isMobile ? 1 : 2"
+              border
+              size="small"
+              class="detail-section"
+            >
+              <el-descriptions-item label="名称">{{ ip.name || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="类型">{{ ip.type || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="获得时间">{{ ip.obtainDate || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="本人排名">{{ ip.rank ? `第${ip.rank}名` : '—' }}</el-descriptions-item>
+              <el-descriptions-item label="其他参与人员" :span="isMobile ? 1 : 2">
+                {{ ip.otherParticipants || '—' }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </template>
 
           <!-- 竞赛 -->
           <el-descriptions v-if="detailData.competition" title="指导学生竞赛" :column="isMobile ? 1 : 2" border size="small" class="detail-section">
@@ -579,6 +593,24 @@ onMounted(() => {
   :deep(.el-descriptions__label) {
       color: var(--color-text-light);
       font-weight: 500;
+  }
+}
+
+.detail-content-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 12px;
+  
+  /* 自定义滚动条使视觉更美观 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c0c4cc;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f5f7fa;
   }
 }
 </style>

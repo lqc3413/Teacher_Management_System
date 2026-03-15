@@ -869,6 +869,10 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
   text-align: justify;
   min-height: 80px;
+  max-height: min(55vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
 }
 
 /* Dialog Frame Overrides */
