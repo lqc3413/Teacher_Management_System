@@ -126,7 +126,7 @@ public class TeacherController {
 
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            return Result.error("用户不存在");
+            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
         }
 
         QueryWrapper<Submission> sq = new QueryWrapper<>();
@@ -168,9 +168,9 @@ public class TeacherController {
                 item.put("taskName", task.getTaskName());
                 item.put("taskEndTime", task.getEndTime());
             } else if (sub.getTaskId() != null) {
-                item.put("taskName", "未知任务");
+                item.put("taskName", "閺堫亞鐓℃禒璇插");
             } else {
-                item.put("taskName", "历史提交");
+                item.put("taskName", "閸樺棗褰堕幓鎰唉");
             }
 
             boolean canResubmit = isRejectedStatus(sub.getStatus()) && isWithinTaskWindow(task, now);
@@ -190,15 +190,27 @@ public class TeacherController {
         return Result.success(data);
     }
     @GetMapping("/detail/{id}")
-    public Result<?> detail(@PathVariable Long id) {
+    public Result<?> detail(@PathVariable Long id, HttpServletResponse response) {
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            return Result.error("\u7528\u6237\u4e0d\u5b58\u5728");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return Result.error(401, "\u7528\u6237\u4e0d\u5b58\u5728");
+        }
+
+        Submission sub = submissionMapper.selectById(id);
+        if (sub == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return Result.error(404, "\u672a\u627e\u5230\u8be5\u63d0\u4ea4\u8bb0\u5f55");
+        }
+        if (!sub.getUserId().equals(userId)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return Result.error(403, "\u65e0\u6743\u8bbf\u95ee\u8be5\u63d0\u4ea4\u8bb0\u5f55");
         }
 
         com.teacher.management.vo.SubmissionDetailVO detail = teacherService.getSubmissionDetail(id, userId);
         if (detail == null) {
-            return Result.error("\u672a\u627e\u5230\u8be5\u63d0\u4ea4\u8bb0\u5f55");
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return Result.error(404, "\u672a\u627e\u5230\u8be5\u63d0\u4ea4\u8bb0\u5f55");
         }
         return Result.success(detail);
     }
@@ -314,21 +326,32 @@ public class TeacherController {
     }
 
     @GetMapping("/export/{id}")
-    public void exportSubmission(@PathVariable Long id, HttpServletResponse response) {
+    public void exportSubmission(@PathVariable Long id, HttpServletResponse response) throws java.io.IOException {
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
-            throw new RuntimeException("\u7528\u6237\u4e0d\u5b58\u5728");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "\u7528\u6237\u4e0d\u5b58\u5728");
+            return;
         }
 
         Submission sub = submissionMapper.selectById(id);
-        if (sub == null || !sub.getUserId().equals(userId)) {
-            throw new RuntimeException("\u65e0\u6743\u8bbf\u95ee\u8be5\u63d0\u4ea4\u8bb0\u5f55");
+        if (sub == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "\u672a\u627e\u5230\u8be5\u63d0\u4ea4\u8bb0\u5f55");
+            return;
+        }
+        if (!sub.getUserId().equals(userId)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "\u65e0\u6743\u8bbf\u95ee\u8be5\u63d0\u4ea4\u8bb0\u5f55");
+            return;
         }
 
         try {
             teacherService.exportSingleSubmission(id, response);
         } catch (Exception e) {
-            throw new RuntimeException("\u5bfc\u51fa\u5931\u8d25\uff1a" + e.getMessage());
+            if (!response.isCommitted()) {
+                response.reset();
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "\u5bfc\u51fa\u5931\u8d25\uff1a" + e.getMessage());
+                return;
+            }
+            throw new RuntimeException("\u5bfc\u51fa\u5931\u8d25\uff1a" + e.getMessage(), e);
         }
     }
 
@@ -414,3 +437,4 @@ public class TeacherController {
         return Result.success("\u5b66\u5386/\u804c\u79f0\u4fe1\u606f\u66f4\u65b0\u6210\u529f");
     }
 }
+
