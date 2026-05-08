@@ -197,9 +197,7 @@ const loadData = async () => {
     })
     tableData.value = res.data.records
     total.value = res.data.total
-  } catch (e) {
-    console.error('获取部门列表失败', e)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }
@@ -262,8 +260,7 @@ const handleViewMembers = async (row) => {
   try {
     const res = await getDeptMembers(row.id)
     memberList.value = res.data || []
-  } catch (e) {
-    console.error('获取成员列表失败', e)
+  } catch {
     memberList.value = []
   } finally {
     memberLoading.value = false

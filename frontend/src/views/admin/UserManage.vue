@@ -90,7 +90,7 @@
       </div>
     </el-card>
 
-    <!-- Dialog -->
+    <!-- 新增/编辑用户弹窗 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '新增用户' : '编辑用户'"
@@ -191,9 +191,7 @@ const loadDepts = async () => {
   try {
     const res = await getAllDepts()
     deptOptions.value = res.data || []
-  } catch (error) {
-    console.error('获取部门失败', error)
-  }
+  } catch {}
 }
 
 const getDeptName = (deptId) => {
@@ -219,9 +217,7 @@ const loadData = async () => {
     const res = await getUserList(params)
     tableData.value = res.data.records || []
     total.value = res.data.total || 0
-  } catch (error) {
-    console.error('获取用户列表失败', error)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }
@@ -283,9 +279,7 @@ const handleSubmit = async () => {
       }
       dialogVisible.value = false
       loadData()
-    } catch (error) {
-      console.error(error)
-    } finally {
+    } catch {} finally {
       submitting.value = false
     }
   })
@@ -300,9 +294,7 @@ const handleDelete = (row) => {
       await deleteUser(row.id)
       ElMessage.success('删除成功')
       loadData()
-    } catch (error) {
-      console.error(error)
-    }
+    } catch {}
   })
 }
 
@@ -318,9 +310,7 @@ const handleResetPwd = (row) => {
     try {
       await updateUser({ id: row.id, password: value })
       ElMessage.success('密码已重置')
-    } catch (error) {
-      console.error(error)
-    }
+    } catch {}
   })
 }
 
@@ -329,9 +319,8 @@ const handleStatusChange = async (row) => {
   try {
     await updateUser({ id: row.id, status: row.status })
     ElMessage.success('状态更新成功')
-  } catch (error) {
+  } catch {
     row.status = row.status === 1 ? 0 : 1 // 回滚
-    console.error(error)
   }
 }
 

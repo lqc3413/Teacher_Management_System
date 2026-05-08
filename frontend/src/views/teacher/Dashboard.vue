@@ -72,10 +72,10 @@
           </div>
           
           <div class="card-footer">
-            <el-button v-if="!isSubmitted" type="primary" class="action-btn" @click="$router.push({ path: '/teacher/info-fill', query: { taskId: activeTask.id } })">
+            <el-button v-if="!isSubmitted" type="primary" class="action-btn" @click="$router.push({ path: routePrefix + '/info-fill', query: { taskId: activeTask.id } })">
               立即填报 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
-            <el-button v-else class="action-btn" @click="$router.push('/teacher/history')">
+            <el-button v-else class="action-btn" @click="$router.push(routePrefix + '/history')">
               查看历史记录
             </el-button>
           </div>
@@ -94,17 +94,17 @@
           </div>
         </div>
 
-        <!-- 3. Quick Actions Grid -->
+        <!-- 快捷操作 -->
         <div class="quick-actions-grid">
-          <div class="action-card" :class="{ disabled: !activeTask }" @click="activeTask ? $router.push({ path: '/teacher/info-fill', query: { taskId: activeTask.id } }) : null">
+          <div class="action-card" :class="{ disabled: !activeTask }" @click="activeTask ? $router.push({ path: routePrefix + '/info-fill', query: { taskId: activeTask.id } }) : null">
             <div class="icon-wrapper"><el-icon><DocumentAdd /></el-icon></div>
             <span class="label">新增申报</span>
           </div>
-          <div class="action-card" @click="$router.push('/teacher/history')">
+          <div class="action-card" @click="$router.push(routePrefix + '/history')">
             <div class="icon-wrapper"><el-icon><DataLine /></el-icon></div>
             <span class="label">历史档案</span>
           </div>
-           <div class="action-card" @click="$router.push('/teacher/profile')">
+           <div class="action-card" @click="$router.push(routePrefix + '/profile')">
             <div class="icon-wrapper"><el-icon><User /></el-icon></div>
             <span class="label">个人中心</span>
           </div>
@@ -152,7 +152,59 @@
       </div>
     </div>
 
-    <!-- Notice Dialog -->
+    <div v-if="isDeptDirector" class="dashboard-bottom-section">
+      <div class="section-card review-card">
+        <div class="card-header review-header">
+          <div>
+            <h3>待审核申报</h3>
+            <p class="review-subtitle">本部门当前待处理 {{ pendingAuditTotal }} 条申报</p>
+          </div>
+          <a href="javascript:;" class="view-all" @click="openDeptAudit">查看全部</a>
+        </div>
+
+        <div class="review-summary">
+          <div class="summary-pill">
+            <span>待初审</span>
+            <strong>{{ deptAuditStats.pendingCount || 0 }}</strong>
+          </div>
+          <div class="summary-pill returned">
+            <span>退回重审</span>
+            <strong>{{ deptAuditStats.finalRejectedCount || 0 }}</strong>
+          </div>
+        </div>
+
+        <div class="review-list" v-loading="pendingAuditLoading">
+          <template v-if="pendingAuditList.length">
+            <div
+              v-for="item in pendingAuditList"
+              :key="item.id"
+              class="review-item"
+              @click="openDeptAudit"
+            >
+              <div class="review-main">
+                <div class="review-top">
+                  <span class="teacher-name">{{ item.realName || '未知教师' }}</span>
+                  <el-tag size="small" :type="item.status === 4 ? 'info' : 'warning'">
+                    {{ item.status === 4 ? '退回重审' : '待初审' }}
+                  </el-tag>
+                </div>
+                <div class="review-task">{{ item.taskName || '未命名任务' }}</div>
+                <div class="review-meta">
+                  {{ item.employeeNo || '—' }} · {{ formatTime(item.createTime) || '未提交时间' }}
+                </div>
+              </div>
+              <el-button link type="primary" @click.stop="openDeptAudit">去审核</el-button>
+            </div>
+          </template>
+          <div v-else class="review-empty">
+            <el-icon><DocumentChecked /></el-icon>
+            <span>当前暂无待审核申报</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 公告详情弹窗 -->
     <el-dialog
       v-model="noticeDialogVisible"
       :title="currentNotice.title"
@@ -172,22 +224,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { getDashboardStats, getSubmissionHistory, getCurrentTask } from '../../api/teacher' // Import getSubmissionHistory
+import { getDeptDirectorStats, getDeptPendingSubmissions } from '../../api/dept-director'
 import { getPublishedNotices } from '../../api/admin'
 import { 
   Calendar, EditPen, Upload, Check, Finished, ArrowRight, CircleCheckFilled,
-  DocumentAdd, DataLine, User, Setting, Bell, Timer
+  DocumentAdd, DataLine, User, Setting, Bell, Timer, DocumentChecked
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const user = ref({ realName: '教师' })
+const userRole = ref((localStorage.getItem('role') || 'teacher').toLowerCase())
 const currentDate = ref(dayjs().format('YYYY年MM月DD日'))
 const isSubmitted = ref(false)
 const currentStatus = ref(-1)
 const submitTime = ref(null)
+const isDeptDirector = computed(() => userRole.value === 'dept_director')
+const routePrefix = computed(() => isDeptDirector.value ? '/dept-director' : '/teacher')
 
 const activeTask = ref(null)
 const taskSubmitted = ref(false)
@@ -202,6 +258,13 @@ const stats = ref({
 const notices = ref([])
 const noticeDialogVisible = ref(false)
 const currentNotice = ref({})
+const pendingAuditList = ref([])
+const pendingAuditTotal = ref(0)
+const pendingAuditLoading = ref(false)
+const deptAuditStats = ref({
+  pendingCount: 0,
+  finalRejectedCount: 0
+})
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -238,11 +301,38 @@ const showNoticeDetail = (item) => {
   noticeDialogVisible.value = true
 }
 
+const openDeptAudit = () => {
+  router.push('/dept-director/audit')
+}
+
+async function fetchDeptAuditSummary() {
+  if (!isDeptDirector.value) return
+
+  pendingAuditLoading.value = true
+  try {
+    const [statsRes, listRes] = await Promise.all([
+      getDeptDirectorStats(),
+      getDeptPendingSubmissions({
+        pageNum: 1,
+        pageSize: 5
+      })
+    ])
+
+    deptAuditStats.value.pendingCount = statsRes.data?.pendingCount || 0
+    deptAuditStats.value.finalRejectedCount = statsRes.data?.finalRejectedCount || 0
+    pendingAuditList.value = listRes.data?.records || []
+    pendingAuditTotal.value = listRes.data?.total || 0
+  } catch {} finally {
+    pendingAuditLoading.value = false
+  }
+}
+
 onMounted(async () => {
   const userInfoStr = localStorage.getItem('userInfo')
   if (userInfoStr) {
     user.value = JSON.parse(userInfoStr)
   }
+  userRole.value = (localStorage.getItem('role') || userRole.value).toLowerCase()
 
   try {
     const res = await getDashboardStats()
@@ -251,29 +341,22 @@ onMounted(async () => {
     stats.value.yearlyCount = res.data.yearlyCount || 0
     stats.value.totalAchievements = res.data.totalAchievements || 0
     
-    // Fallback: If isSubmitted is true, fetch detailed status from history
+    // 已提交时补查最近一次历史记录，用于展示当前审核状态
     if (isSubmitted.value) {
-        // Default to reviewing first
+        // 默认按审核中展示，查询到历史后再覆盖
         currentStatus.value = 0
         try {
-            // Get latest submission
+            // 取最近一次提交记录的状态
             const historyRes = await getSubmissionHistory({ page: 1, size: 1 })
             if (historyRes.data && historyRes.data.records && historyRes.data.records.length > 0) {
-                // Assuming the first one is the latest
-                // Check if it matches the current month/year if needed, 
-                // but for now, just take the latest status
                 currentStatus.value = historyRes.data.records[0].status
             }
-        } catch (e) {
-            console.error('Fetch History Error', e)
-        }
+        } catch {}
     } else {
         currentStatus.value = -1
     }
 
-  } catch (error) {
-    // console.error('Fetch Stats Error', error)
-  }
+  } catch (error) {}
 
   try {
     const res = await getPublishedNotices()
@@ -284,9 +367,7 @@ onMounted(async () => {
       content: n.content,
       date: n.publishTime ? dayjs(n.publishTime).format('MM-DD') : ''
     }))
-  } catch (error) {
-    // console.error('Fetch Notices Error', error)
-  }
+  } catch (error) {}
 
   // 获取当前活动任务
   try {
@@ -298,9 +379,9 @@ onMounted(async () => {
       updateCountdown()
       countdownTimer = setInterval(updateCountdown, 60000) // 每分钟更新
     }
-  } catch (error) {
-    // console.error('Fetch Task Error', error)
-  }
+  } catch (error) {}
+
+  await fetchDeptAuditSummary()
 })
 
 onBeforeUnmount(() => {
@@ -388,7 +469,7 @@ onBeforeUnmount(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive */
+/* 响应式布局 */
 @media (max-width: 768px) {
   .task-banner {
     flex-direction: column;
@@ -447,7 +528,7 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Layout Grid */
+/* 页面网格布局 */
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -470,7 +551,11 @@ onBeforeUnmount(() => {
   gap: 24px;
 }
 
-/* Cards Common */
+.dashboard-bottom-section {
+  margin-top: 24px;
+}
+
+/* 卡片通用样式 */
 .section-card {
   background: #FFFFFF;
   border: 1px solid var(--color-border);
@@ -681,7 +766,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-/* 3. Quick Actions */
+/* 快捷操作区域 */
 .quick-actions-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -764,7 +849,137 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 5. Compact Notices */
+/* 主任待审核区域 */
+.review-card {
+  .review-header {
+    align-items: flex-start;
+    margin-bottom: 16px;
+
+    h3 {
+      margin-bottom: 4px;
+    }
+  }
+
+  .review-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-light);
+  }
+}
+
+.review-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .summary-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border: 1px solid #F4E2AE;
+    border-radius: 8px;
+    background: #FFFBEB;
+
+    span {
+      font-size: 13px;
+      color: #92400E;
+    }
+
+    strong {
+      font-size: 18px;
+      color: #78350F;
+      font-family: var(--font-heading);
+    }
+
+    &.returned {
+      border-color: #D1D5DB;
+      background: #F9FAFB;
+
+      span,
+      strong {
+        color: #4B5563;
+      }
+    }
+  }
+}
+
+.review-list {
+  min-height: 88px;
+}
+
+.review-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid #F4F4F5;
+  cursor: pointer;
+
+  &:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  &:hover .review-task {
+    color: var(--color-primary);
+  }
+
+  .review-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .review-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .teacher-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .review-task {
+    font-size: 13px;
+    color: var(--color-text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s;
+  }
+
+  .review-meta {
+    font-size: 12px;
+    color: var(--color-text-light);
+  }
+}
+
+.review-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 88px;
+  color: #A1A1AA;
+  font-size: 13px;
+
+  .el-icon {
+    font-size: 24px;
+  }
+}
+
+/* 公告列表区域 */
 .notice-list-compact {
   display: flex;
   flex-direction: column;
@@ -828,8 +1043,7 @@ onBeforeUnmount(() => {
   &:hover { color: var(--color-primary); }
 }
 
-/* Dialog */
-/* Dialog Content Styles */
+/* 公告详情内容 */
 .notice-meta {
   display: flex;
   align-items: center;
@@ -875,7 +1089,7 @@ onBeforeUnmount(() => {
   padding-right: 8px;
 }
 
-/* Dialog Frame Overrides */
+/* 弹窗框体样式 */
 :deep(.minimal-dialog) {
   border-radius: 12px;
   overflow: hidden;
@@ -907,7 +1121,7 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Mobile Responsive Adjustments - Wrapped for Specificity */
+/* 移动端弹窗适配 */
 @media (max-width: 768px) {
   .dashboard-container {
     padding-bottom: 80px; 
@@ -931,6 +1145,19 @@ onBeforeUnmount(() => {
     .main-grid {
       grid-template-columns: 1fr;
       gap: 16px;
+    }
+
+    .review-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .review-item {
+      flex-direction: column;
+      align-items: flex-start;
+
+      .el-button {
+        padding-left: 0;
+      }
     }
 
     .section-card {

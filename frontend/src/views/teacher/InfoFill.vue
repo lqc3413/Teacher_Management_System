@@ -860,7 +860,7 @@
 
 
     </div>
-    <!-- Pro Max Success Dialog -->
+    <!-- 提交成功弹窗 -->
     <el-dialog
       v-model="successVisible"
       :show-close="false"
@@ -1095,7 +1095,7 @@ const formData = reactive({
   }
 })
 
-// 日期格式化辅助
+// 日期格式化
 const fmt = (val, pattern = 'YYYY-MM-DD') => {
   if (!val) return ''
   const parsed = dayjs(val)
@@ -1133,7 +1133,6 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid, fields) => {
     if (!valid) {
       ElMessage.error('请检查填写内容是否完整')
-      console.log('校验失败:', fields)
       return
     }
 
@@ -1255,9 +1254,7 @@ const handleSubmit = async () => {
       lastTaskName.value = currentTaskName.value || payload.submitMonth
       successVisible.value = true
       
-    } catch (e) {
-      console.error('提交出错:', e)
-    } finally {
+    } catch {} finally {
       submitting.value = false
     }
   })
@@ -1311,8 +1308,7 @@ onMounted(async () => {
   if (resubmitId) {
     try {
       currentTaskData = await loadCurrentTaskContext(queryTaskId)
-    } catch (e) {
-      console.error('获取当前任务失败', e)
+    } catch {
       redirectExpiredResubmit()
       return
     }
@@ -1338,8 +1334,7 @@ onMounted(async () => {
         noActiveTask.value = true
         return
       }
-    } catch (e) {
-      console.error('获取当前任务失败', e)
+    } catch {
       noActiveTask.value = true
       return
     }
@@ -1448,7 +1443,7 @@ onMounted(async () => {
       formData.award.certNo = a.certNo || ''
     }
 
-    // 回填论文（【B04 修复】兼容 paperList 和旧的 paper 字段）
+    // 兼容 paperList 和旧版 paper 字段回填论文
     const paperData = (d.paperList && d.paperList.length) ? d.paperList[0] : d.paper
     if (paperData) {
       hasPaper.value = true
@@ -1511,8 +1506,7 @@ onMounted(async () => {
     }
 
     ElMessage.success('已加载被退回的提交数据，请修改后重新提交')
-  } catch (error) {
-    console.error('加载退回数据失败', error)
+  } catch {
     ElMessage.error('加载退回数据失败')
   }
 })
@@ -1687,7 +1681,7 @@ onMounted(async () => {
     padding-bottom: 18px; 
   }
 
-  /* Input Styling Override (Pro Max - Focus Ring) */
+  /* 输入框样式覆盖 */
   :deep(.el-input__wrapper),
   :deep(.el-select__wrapper),
   :deep(.el-textarea__inner) {
@@ -1838,7 +1832,7 @@ onMounted(async () => {
     border-color: var(--color-cta);
   }
 
-  /* Responsive adjustment */
+  /* 移动端表单布局 */
   &.mobile-form {
     :deep(.el-form-item) {
       margin-bottom: 24px;

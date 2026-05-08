@@ -167,8 +167,10 @@
       title="申报详情"
       width="800px"
       top="5vh"
+      class="dept-detail-dialog"
+      destroy-on-close
     >
-      <div v-if="detailData" class="detail-content">
+      <div v-if="detailData" class="detail-content detail-content-wrapper">
         <el-descriptions title="基本信息" :column="2" border size="small">
           <el-descriptions-item label="教师姓名">{{ detailData.teacherName }}</el-descriptions-item>
           <el-descriptions-item label="工号">{{ detailData.employeeNo }}</el-descriptions-item>
@@ -266,9 +268,7 @@ async function fetchStats() {
     if (res.code === 200) {
       stats.value = res.data
     }
-  } catch (e) {
-    console.error('获取统计失败', e)
-  }
+  } catch {}
 }
 
 async function fetchList() {
@@ -528,7 +528,31 @@ onMounted(() => {
 }
 
 .detail-content {
-  padding: 8px 0;
+  padding: 8px 0 20px;
+}
+
+:deep(.dept-detail-dialog .el-dialog__body) {
+  padding: 24px;
+}
+
+.detail-content-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 12px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c0c4cc;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f5f7fa;
+    border-radius: 3px;
+  }
 }
 
 :deep(.el-table) {

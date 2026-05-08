@@ -47,9 +47,7 @@ const fetchConfig = async () => {
   try {
     const res = await getConfigList()
     configList.value = res.data || []
-  } catch (e) {
-    console.error('获取配置失败', e)
-  } finally {
+  } catch {} finally {
     configLoading.value = false
   }
 }
@@ -63,9 +61,7 @@ const handleSaveConfig = async () => {
     }))
     await updateConfigBatch(items)
     ElMessage.success('配置保存成功')
-  } catch (e) {
-    console.error('保存配置失败', e)
-  } finally {
+  } catch {} finally {
     configSaving.value = false
   }
 }

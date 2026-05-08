@@ -119,9 +119,7 @@ async function fetchMessages() {
 
     // 计算未读数
     unreadCount.value = messages.value.filter(m => m.isRead === 0).length
-  } catch (error) {
-    console.error('获取消息失败', error)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }
@@ -141,9 +139,7 @@ async function handleClickMessage(msg) {
       msg.isRead = 1
       unreadCount.value = Math.max(0, unreadCount.value - 1)
       emit('refreshCount')
-    } catch (error) {
-      console.error('标记已读失败', error)
-    }
+    } catch {}
   }
 }
 
@@ -153,9 +149,7 @@ async function handleMarkAllRead() {
     messages.value.forEach(m => { m.isRead = 1 })
     unreadCount.value = 0
     emit('refreshCount')
-  } catch (error) {
-    console.error('全部标记已读失败', error)
-  }
+  } catch {}
 }
 
 function handleClose() {

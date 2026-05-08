@@ -288,8 +288,7 @@ const handleExportAll = async () => {
     link.click()
     window.URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
-  } catch (error) {
-    console.error('导出失败', error)
+  } catch {
     ElMessage.error('导出失败，请稍后重试')
   } finally {
     exportLoading.value = false
@@ -307,9 +306,7 @@ onMounted(async () => {
         rawData[status][key] = src[key] || []
       })
     })
-  } catch (error) {
-    console.error('获取成果数据失败', error)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 })
@@ -526,7 +523,7 @@ onMounted(async () => {
   padding: 40px 0;
 }
 
-/* Responsive */
+/* 响应式布局 */
 @media (max-width: 768px) {
   .achievements-container {
     padding-bottom: 80px;

@@ -187,9 +187,7 @@ const fetchNotices = async () => {
     const res = await getNoticeList(params)
     noticeList.value = res.data.records || []
     noticeTotal.value = res.data.total || 0
-  } catch (e) {
-    console.error('获取通知列表失败', e)
-  } finally {
+  } catch {} finally {
     noticeLoading.value = false
   }
 }
@@ -228,9 +226,7 @@ const handleNoticeSubmit = async () => {
       }
       noticeDialogVisible.value = false
       fetchNotices()
-    } catch (e) {
-      console.error('操作失败', e)
-    } finally {
+    } catch {} finally {
       noticeSaving.value = false
     }
   })

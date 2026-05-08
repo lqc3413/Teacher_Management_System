@@ -124,15 +124,17 @@
       </template>
     </el-dialog>
 
-    <!-- Detail View Dialog -->
+    <!-- 详情弹窗 -->
     <el-dialog
       v-model="viewDialogVisible"
       title="提交详情"
       width="800px"
       append-to-body
       top="5vh"
+      class="material-detail-dialog"
+      destroy-on-close
     >
-      <div class="detail-container" v-if="detailData">
+      <div class="detail-container detail-content-wrapper" v-if="detailData">
         <el-descriptions title="基本信息" :column="2" border size="small">
           <el-descriptions-item label="教师姓名">{{ detailData.teacherName }}</el-descriptions-item>
           <el-descriptions-item label="工号">{{ detailData.employeeNo }}</el-descriptions-item>
@@ -494,18 +496,10 @@ const getStatusType = (status) => {
     justify-content: flex-end;
   }
 
-  /* detail view */
   .detail-container {
-    max-height: 65vh;
-    overflow-y: auto;
     padding: 20px;
     background: #fafaf9; /* Warm stone bg inside dialog */
     border-radius: 8px;
-
-    :deep(.el-descriptions__title) {
-      font-family: var(--font-heading);
-      font-weight: 600;
-    }
   }
 
   .audit-remark-box {
@@ -530,6 +524,37 @@ const getStatusType = (status) => {
       font-weight: 600;
       color: var(--color-primary);
     }
+  }
+}
+
+:deep(.material-detail-dialog .el-dialog__body) {
+  padding: 24px;
+}
+
+.detail-content-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 12px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c0c4cc;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f5f7fa;
+    border-radius: 3px;
+  }
+}
+
+.detail-container {
+  :deep(.el-descriptions__title) {
+    font-family: var(--font-heading);
+    font-weight: 600;
   }
 }
 

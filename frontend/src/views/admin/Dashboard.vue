@@ -136,9 +136,7 @@ async function fetchStats() {
   try {
     const res = await getAdminStats()
     stats.value = res.data
-  } catch (error) {
-    console.error('获取统计数据失败', error)
-  }
+  } catch {}
 }
 
 async function fetchPendingList() {
@@ -150,9 +148,7 @@ async function fetchPendingList() {
       status: 0 // 0=Pending
     })
     pendingList.value = res.data.records
-  } catch (error) {
-    console.error('获取待审核列表失败', error)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }
@@ -239,8 +235,6 @@ function formatTime(time) {
       margin: 0;
     }
   }
-
-  /* Old section-title style override/removal if needed, currently reusing logic but cleaner structure */
 
   .action-card {
     height: 100%;

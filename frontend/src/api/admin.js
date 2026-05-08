@@ -50,8 +50,8 @@ export function deleteUser(id) {
 }
 
 /**
- * 重置密码 (通常是更新用户接口的一部分，或者单独接口，这里假设用 updateUser)
- * 暂时前端传 password 字段调用 updateUser
+ * 重置密码
+ * 当前通过 updateUser 接口传入 password 字段实现
  */
 
 

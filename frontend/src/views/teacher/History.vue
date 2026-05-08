@@ -168,7 +168,7 @@
             <el-descriptions-item label="起止时间">{{ detailData.training.startDate || '—' }} 至 {{ detailData.training.endDate || '—' }}</el-descriptions-item>
           </el-descriptions>
 
-          <!-- 论文（【B04 修复】支持展示多条论文） -->
+          <!-- 论文（支持展示多条论文） -->
           <template v-if="detailData.paperList && detailData.paperList.length">
             <el-descriptions v-for="(p, pIdx) in detailData.paperList" :key="'paper-' + pIdx"
               :title="'发表论文' + (detailData.paperList.length > 1 ? ` (${pIdx+1})` : '')" :column="isMobile ? 1 : 2" border size="small" class="detail-section">
@@ -317,9 +317,7 @@ const fetchData = async () => {
     const res = await getSubmissionHistory(params)
     tableData.value = res.data.records || []
     total.value = res.data.total || 0
-  } catch (error) {
-    console.error('获取历史记录失败', error)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }
@@ -344,9 +342,7 @@ const viewDetail = async (row) => {
   try {
     const res = await getSubmissionDetail(row.id)
     detailData.value = res.data
-  } catch (error) {
-    console.error('获取详情失败', error)
-  } finally {
+  } catch {} finally {
     detailLoading.value = false
   }
 }
@@ -370,8 +366,7 @@ const exportExcel = async (row) => {
     link.click()
     window.URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
-  } catch (error) {
-    console.error('导出失败', error)
+  } catch {
     ElMessage.error('导出失败，请稍后重试')
   }
 }
@@ -451,7 +446,7 @@ onMounted(() => {
     justify-content: flex-end;
   }
   
-  // Mobile styles
+  // 移动端卡片样式
   .mobile-card-list {
     .mobile-item-card {
       margin-bottom: 12px;
@@ -555,7 +550,7 @@ onMounted(() => {
   }
 }
 
-// Detail dialog styles
+// 详情弹窗样式
 :deep(.el-dialog) {
   border-radius: 4px;
   overflow: hidden;
@@ -601,7 +596,7 @@ onMounted(() => {
   overflow-y: auto;
   padding-right: 12px;
   
-  /* 自定义滚动条使视觉更美观 */
+  /* 自定义滚动条 */
   &::-webkit-scrollbar {
     width: 6px;
   }

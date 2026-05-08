@@ -155,9 +155,7 @@ const handleLogin = async (role) => {
       const actualRole = res.data.role
       const dashboardMap = { admin: '/admin/dashboard', dept_director: '/dept-director/dashboard' }
       router.push(dashboardMap[actualRole] || '/teacher/dashboard')
-    } catch (error) {
-      console.error('登录失败:', error)
-    } finally {
+    } catch {} finally {
       loading.value = false
     }
   })

@@ -154,12 +154,12 @@ const userRole = ref(localStorage.getItem('role') || 'teacher')
 const isDeptDirector = computed(() => userRole.value === 'dept_director')
 const routePrefix = computed(() => isDeptDirector.value ? '/dept-director' : '/teacher')
 
-// Helper for initials
+// 用户头像首字母
 const userInitials = computed(() => {
   return realName.value ? realName.value.charAt(0).toUpperCase() : 'T'
 })
 
-// Route Name Map for Header
+// 页头路由名称映射
 const routeNameMap = {
   'TeacherDashboard': '工作台',
   'DeptDirectorDashboard': '工作台',
@@ -175,7 +175,7 @@ const routeNameMap = {
 }
 const currentRouteName = computed(() => routeNameMap[route.name] || '工作台')
 
-// Notifications
+// 通知状态
 const unreadCount = ref(0)
 let pollTimer = null
 
@@ -184,7 +184,7 @@ async function fetchUnreadCount() {
     const res = await getUnreadCount()
     unreadCount.value = res.data
   } catch (e) {
-    // ignore
+    // 忽略未读数获取失败，避免影响页面主流程
   }
 }
 
@@ -195,7 +195,7 @@ onMounted(() => {
       const userInfo = JSON.parse(userInfoStr)
       realName.value = userInfo.realName || userInfo.username || 'Teacher'
     } catch (e) {
-      console.error('Error parsing user info', e)
+      console.error('[教师布局] 解析用户信息失败', e)
     }
   }
 
@@ -233,10 +233,9 @@ const handleCommand = (command) => {
   display: flex;
 }
 
-/* Sidebar Styling - Pro Max (Luminous Enterprise) */
 .sidebar {
   width: 256px;
-  background-color: var(--color-sidebar); /* White */
+  background-color: var(--color-sidebar);
   color: var(--color-text);
   display: flex;
   flex-direction: column;
@@ -359,14 +358,14 @@ const handleCommand = (command) => {
   }
 }
 
-/* Top Header Styling */
+/* 顶部栏样式 */
 .top-header {
   position: fixed;
   top: 0;
   right: 0;
   left: 256px;
   height: 72px;
-  background: rgba(255, 255, 255, 0.85); /* Proper glass effect base */
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
@@ -442,7 +441,7 @@ const handleCommand = (command) => {
 
       &:hover {
         color: var(--color-primary);
-        background: #EFF6FF; /* Indigo 50 */
+        background: #EFF6FF;
       }
       
       :deep(.el-badge__content) {
@@ -498,7 +497,7 @@ const handleCommand = (command) => {
   }
 }
 
-/* Main Content Area */
+/* 主内容区 */
 .main-content {
   flex: 1;
   margin-left: 256px;
@@ -520,7 +519,7 @@ const handleCommand = (command) => {
   }
 
   .content-wrapper {
-    max-width: 1280px; /* Wider for Pro Max feel */
+    max-width: 1280px;
     margin: 0 auto;
     padding: 32px 40px;
     box-sizing: border-box;

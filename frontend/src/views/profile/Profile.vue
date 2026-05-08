@@ -338,9 +338,7 @@ const initData = async () => {
       }
     }
 
-  } catch (error) {
-    console.error('获取用户信息失败', error)
-  }
+  } catch {}
 }
 
 onMounted(() => {
@@ -379,9 +377,7 @@ const loadEduInfo = async () => {
         skillCert: res.data.skillCert || ''
       })
     }
-  } catch (e) {
-    console.error('获取学历信息失败', e)
-  }
+  } catch {}
 }
 
 const handleUpdateEdu = async () => {

@@ -175,9 +175,7 @@ async function fetchList() {
     const res = await getTaskList({ page: currentPage.value, size: pageSize.value })
     taskList.value = res.data.records || []
     total.value = res.data.total || 0
-  } catch (err) {
-    console.error('获取任务列表失败', err)
-  } finally {
+  } catch {} finally {
     loading.value = false
   }
 }

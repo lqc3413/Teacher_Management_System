@@ -1,5 +1,6 @@
 # === Java / Maven ===
 target/
+backend/target/
 *.class
 *.jar
 *.war
@@ -34,6 +35,12 @@ desktop.ini
 *.txt
 !README.txt
 *.tmp
+tmp_*
+tmp_*/
+pdf_*
+pdf_*/
+pdf_page_test.png
+startup_log*.txt
 boot_log.txt
 backend.log
 compile_err.log
@@ -48,6 +55,9 @@ api_test.json
 
 # === Design system (generated) ===
 design-system/
+
+# === Local documents ===
+docs/
 
 # === Python cache ===
 __pycache__/

@@ -126,7 +126,7 @@ async function fetchUnreadCount() {
     const res = await getUnreadCount()
     unreadCount.value = res.data
   } catch (e) {
-    // ignore
+    // 忽略未读数获取失败，避免影响页面主流程
   }
 }
 

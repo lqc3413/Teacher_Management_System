@@ -63,7 +63,7 @@ export function getAchievements() {
  *   submissionStatus: number|null, // 最新提交状态 (0=待初审,1=已归档,2=已驳回,3=待终审,4=终审退回)
  *   canResubmit: boolean,          // 是否允许重提 (status=2或4时为true)
  *   resubmitSubmissionId: number|null, // 可重提时对应的 submission ID
- *   hasSubmitted: boolean          // [过渡字段] 等价于 submissionExists，后续移除
+ *   hasSubmitted: boolean          // 与 submissionExists 保持一致
  * }}>}
  */
 export function getCurrentTask(params) {
